@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server"
+﻿import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
+import { authOptions } from "../../../lib/auth"
+import { prisma } from "../../../lib/prisma"
 
 export async function POST(req: Request) {
   try {
@@ -9,26 +9,26 @@ export async function POST(req: Request) {
 
     if (!session?.user) {
       return NextResponse.json(
-        { error: "Необходима авторизация" },
+        { error: "РќРµРѕР±С…РѕРґРёРјР° Р°РІС‚РѕСЂРёР·Р°С†РёСЏ" },
         { status: 401 }
       )
     }
 
     const data = await req.json()
 
-    // Находим пользователя в БД
+    // РќР°С…РѕРґРёРј РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РІ Р‘Р”
     const user = await prisma.user.findUnique({
       where: { phone: session.user.phone as string }
     })
 
     if (!user) {
       return NextResponse.json(
-        { error: "Пользователь не найден" },
+        { error: "РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ РЅР°Р№РґРµРЅ" },
         { status: 404 }
       )
     }
 
-    // Создаём бронь
+    // РЎРѕР·РґР°С‘Рј Р±СЂРѕРЅСЊ
     const booking = await prisma.booking.create({
       data: {
         userId: user.id,
@@ -41,16 +41,16 @@ export async function POST(req: Request) {
       }
     })
 
-    // В режиме разработки выводим код в консоль
-    console.log(`✅ Заявка №${booking.id.slice(-6)} создана`)
-    console.log(`   Маршрут: ${data.routeId}`)
-    console.log(`   Дата: ${data.datetime}`)
-    console.log(`   Пассажиры: ${data.passengers}`)
-    console.log(`   Багаж: ${data.baggageType}`)
-    console.log(`   Цена: ${data.priceCalculated} ₽`)
+    // Р’ СЂРµР¶РёРјРµ СЂР°Р·СЂР°Р±РѕС‚РєРё РІС‹РІРѕРґРёРј РєРѕРґ РІ РєРѕРЅСЃРѕР»СЊ
+    console.log(`вњ… Р—Р°СЏРІРєР° в„–${booking.id.slice(-6)} СЃРѕР·РґР°РЅР°`)
+    console.log(`   РњР°СЂС€СЂСѓС‚: ${data.routeId}`)
+    console.log(`   Р”Р°С‚Р°: ${data.datetime}`)
+    console.log(`   РџР°СЃСЃР°Р¶РёСЂС‹: ${data.passengers}`)
+    console.log(`   Р‘Р°РіР°Р¶: ${data.baggageType}`)
+    console.log(`   Р¦РµРЅР°: ${data.priceCalculated} в‚Ѕ`)
 
-    // Здесь позже будет отправка SMS и MAX
-    // await sendSms(user.phone, `Заявка №${booking.id.slice(-6)} принята`)
+    // Р—РґРµСЃСЊ РїРѕР·Р¶Рµ Р±СѓРґРµС‚ РѕС‚РїСЂР°РІРєР° SMS Рё MAX
+    // await sendSms(user.phone, `Р—Р°СЏРІРєР° в„–${booking.id.slice(-6)} РїСЂРёРЅСЏС‚Р°`)
     // await sendMax(user.phone, booking)
 
     return NextResponse.json({
@@ -60,8 +60,9 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error("Booking error:", error)
     return NextResponse.json(
-      { error: "Ошибка сервера" },
+      { error: "РћС€РёР±РєР° СЃРµСЂРІРµСЂР°" },
       { status: 500 }
     )
   }
 }
+

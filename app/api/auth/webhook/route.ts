@@ -1,5 +1,5 @@
 ﻿import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { prisma } from "../../../lib/prisma"
 
 export async function POST(req: Request) {
   try {
@@ -64,3 +64,4 @@ export async function POST(req: Request) {
 export async function GET() {
   return NextResponse.json({ status: "OK", message: "Webhook endpoint is working" })
 }
+
