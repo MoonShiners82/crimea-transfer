@@ -9,7 +9,7 @@ export async function GET() {
 
     if (!session?.user) {
       return NextResponse.json(
-        { error: "Необходима авторизация" },
+        { error: "РќРµРѕР±С…РѕРґРёРјР° Р°РІС‚РѕСЂРёР·Р°С†РёСЏ" },
         { status: 401 }
       )
     }
@@ -20,7 +20,7 @@ export async function GET() {
 
     if (!user || user.role !== "admin") {
       return NextResponse.json(
-        { error: "Доступ запрещён" },
+        { error: "Р”РѕСЃС‚СѓРї Р·Р°РїСЂРµС‰С‘РЅ" },
         { status: 403 }
       )
     }
@@ -49,7 +49,7 @@ export async function GET() {
   } catch (error) {
     console.error("Get bookings error:", error)
     return NextResponse.json(
-      { error: "Ошибка сервера" },
+      { error: "РћС€РёР±РєР° СЃРµСЂРІРµСЂР°" },
       { status: 500 }
     )
   }

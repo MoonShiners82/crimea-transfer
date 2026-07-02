@@ -7,7 +7,7 @@ export async function POST(req: Request) {
 
     if (!phone) {
       return NextResponse.json(
-        { error: "Телефон обязателен" },
+        { error: "РўРµР»РµС„РѕРЅ РѕР±СЏР·Р°С‚РµР»РµРЅ" },
         { status: 400 }
       )
     }
@@ -24,15 +24,15 @@ export async function POST(req: Request) {
 
     if (isTestMode) {
       console.log("=".repeat(50))
-      console.log("?? ТЕСТОВЫЙ РЕЖИМ — SMS не отправлено")
-      console.log("?? Телефон: " + phone)
-      console.log("?? Код для " + phone + ": " + code)
+      console.log("?? РўР•РЎРўРћР’Р«Р™ Р Р•Р–РРњ вЂ” SMS РЅРµ РѕС‚РїСЂР°РІР»РµРЅРѕ")
+      console.log("?? РўРµР»РµС„РѕРЅ: " + phone)
+      console.log("?? РљРѕРґ РґР»СЏ " + phone + ": " + code)
       console.log("=".repeat(50))
 
       return NextResponse.json({
         success: true,
         testMode: true,
-        message: "Тестовый режим. Код: " + code
+        message: "РўРµСЃС‚РѕРІС‹Р№ СЂРµР¶РёРј. РљРѕРґ: " + code
       })
     }
 
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
         },
         body: JSON.stringify({
           to: phone,
-          text: "Код подтверждения: " + code + ". Действует 5 минут."
+          text: "РљРѕРґ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ: " + code + ". Р”РµР№СЃС‚РІСѓРµС‚ 5 РјРёРЅСѓС‚."
         }),
         // @ts-ignore
         agent
@@ -58,26 +58,26 @@ export async function POST(req: Request) {
         const errorText = await response.text()
         console.error("GreenSMS error:", errorText)
         return NextResponse.json(
-          { error: "Не удалось отправить SMS" },
+          { error: "РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ SMS" },
           { status: 500 }
         )
       }
 
-      console.log("? SMS отправлено на " + phone)
-      console.log("?? Код для " + phone + ": " + code)
+      console.log("? SMS РѕС‚РїСЂР°РІР»РµРЅРѕ РЅР° " + phone)
+      console.log("?? РљРѕРґ РґР»СЏ " + phone + ": " + code)
 
       return NextResponse.json({ success: true })
     } catch (smsError) {
       console.error("SMS error:", smsError)
       return NextResponse.json(
-        { error: "Ошибка отправки SMS" },
+        { error: "РћС€РёР±РєР° РѕС‚РїСЂР°РІРєРё SMS" },
         { status: 500 }
       )
     }
   } catch (error) {
     console.error("Send code error:", error)
     return NextResponse.json(
-      { error: "Ошибка сервера" },
+      { error: "РћС€РёР±РєР° СЃРµСЂРІРµСЂР°" },
       { status: 500 }
     )
   }

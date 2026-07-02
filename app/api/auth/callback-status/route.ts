@@ -10,7 +10,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ verified: false })
     }
 
-    // Ищем последний код для этого телефона, созданный за последнюю минуту
+    // РС‰РµРј РїРѕСЃР»РµРґРЅРёР№ РєРѕРґ РґР»СЏ СЌС‚РѕРіРѕ С‚РµР»РµС„РѕРЅР°, СЃРѕР·РґР°РЅРЅС‹Р№ Р·Р° РїРѕСЃР»РµРґРЅСЋСЋ РјРёРЅСѓС‚Сѓ
     const oneMinuteAgo = new Date(Date.now() - 60 * 1000)
     
     const otp = await prisma.otpCode.findFirst({
