@@ -1,0 +1,61 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  phone         String    @unique
+  name          String?
+  role          String    @default("user")
+  createdAt     DateTime  @default(now())
+  bookings      Booking[]
+}
+model Route {
+  id              String    @id @default(cuid())
+  fromPoint       String
+  toPoint         String
+  distanceKm      Int
+  durationMin     Int
+  priceBase       Int
+  pricePerBaggage Int
+  isActive        Boolean   @default(true)
+  bookings        Booking[]
+}
+
+model Booking {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  routeId         String
+  route           Route     @relation(fields: [routeId], references: [id])
+  datetime        DateTime
+  passengers      Int
+  baggageType     String
+  priceCalculated Int
+  priceFinal      Int?
+  status          String    @default("pending")
+  driverName      String?
+  driverPhone     String?
+  carInfo         String?
+  createdAt       DateTime  @default(now())
+  confirmedAt     DateTime?
+}
+
+model OtpCode {
+  id        String    @id @default(cuid())
+  phone     String
+  code      String
+  expiresAt DateTime
+  isUsed    Boolean   @default(false)
+  createdAt DateTime  @default(now())
+}
