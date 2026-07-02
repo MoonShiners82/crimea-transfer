@@ -1,8 +1,8 @@
-﻿import NextAuth, { type NextAuthOptions } from "next-auth"
+import NextAuth from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { prisma } from "./prisma"
 
-export const authOptions: NextAuthOptions = {
+export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     CredentialsProvider({
       name: "SMS Code",
@@ -18,7 +18,6 @@ export const authOptions: NextAuthOptions = {
         const phone = credentials.phone as string
         const code = credentials.code as string
 
-        // Ищем последний код в БД
         const otp = await prisma.otpCode.findFirst({
           where: {
             phone,
@@ -36,25 +35,21 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
-        // Если это Flash Call — принимаем любые 4 цифры
         if (otp.code === "flashcall") {
           if (code.length !== 4 || !/^\d{4}$/.test(code)) {
             return null
           }
         } else {
-          // Обычная проверка кода
           if (otp.code !== code) {
             return null
           }
         }
 
-        // Помечаем код как использованный
         await prisma.otpCode.update({
           where: { id: otp.id },
           data: { isUsed: true }
         })
 
-        // Находим или создаём пользователя
         let user = await prisma.user.findUnique({
           where: { phone }
         })
@@ -96,6 +91,4 @@ export const authOptions: NextAuthOptions = {
     }
   },
   secret: process.env.NEXTAUTH_SECRET,
-}
-
-export default NextAuth(authOptions)
+})
