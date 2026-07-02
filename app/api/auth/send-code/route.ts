@@ -1,4 +1,4 @@
-п»їimport { NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { prisma } from "../../../lib/prisma"
 
 export async function POST(req: Request) {
@@ -7,7 +7,7 @@ export async function POST(req: Request) {
 
     if (!phone) {
       return NextResponse.json(
-        { error: "РўРµР»РµС„РѕРЅ РѕР±СЏР·Р°С‚РµР»РµРЅ" },
+        { error: "Телефон обязателен" },
         { status: 400 }
       )
     }
@@ -24,15 +24,15 @@ export async function POST(req: Request) {
 
     if (isTestMode) {
       console.log("=".repeat(50))
-      console.log("рџ§Є РўР•РЎРўРћР’Р«Р™ Р Р•Р–РРњ вЂ” SMS РЅРµ РѕС‚РїСЂР°РІР»РµРЅРѕ")
-      console.log("рџ“± РўРµР»РµС„РѕРЅ: " + phone)
-      console.log("рџ”‘ РљРѕРґ РґР»СЏ " + phone + ": " + code)
+      console.log("?? ТЕСТОВЫЙ РЕЖИМ — SMS не отправлено")
+      console.log("?? Телефон: " + phone)
+      console.log("?? Код для " + phone + ": " + code)
       console.log("=".repeat(50))
 
       return NextResponse.json({
         success: true,
         testMode: true,
-        message: "РўРµСЃС‚РѕРІС‹Р№ СЂРµР¶РёРј. РљРѕРґ: " + code
+        message: "Тестовый режим. Код: " + code
       })
     }
 
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
         },
         body: JSON.stringify({
           to: phone,
-          text: "РљРѕРґ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ: " + code + ". Р”РµР№СЃС‚РІСѓРµС‚ 5 РјРёРЅСѓС‚."
+          text: "Код подтверждения: " + code + ". Действует 5 минут."
         }),
         // @ts-ignore
         agent
@@ -58,26 +58,26 @@ export async function POST(req: Request) {
         const errorText = await response.text()
         console.error("GreenSMS error:", errorText)
         return NextResponse.json(
-          { error: "РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ SMS" },
+          { error: "Не удалось отправить SMS" },
           { status: 500 }
         )
       }
 
-      console.log("вњ… SMS РѕС‚РїСЂР°РІР»РµРЅРѕ РЅР° " + phone)
-      console.log("рџ”‘ РљРѕРґ РґР»СЏ " + phone + ": " + code)
+      console.log("? SMS отправлено на " + phone)
+      console.log("?? Код для " + phone + ": " + code)
 
       return NextResponse.json({ success: true })
     } catch (smsError) {
       console.error("SMS error:", smsError)
       return NextResponse.json(
-        { error: "РћС€РёР±РєР° РѕС‚РїСЂР°РІРєРё SMS" },
+        { error: "Ошибка отправки SMS" },
         { status: 500 }
       )
     }
   } catch (error) {
     console.error("Send code error:", error)
     return NextResponse.json(
-      { error: "РћС€РёР±РєР° СЃРµСЂРІРµСЂР°" },
+      { error: "Ошибка сервера" },
       { status: 500 }
     )
   }

@@ -1,4 +1,4 @@
-п»їimport { NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { prisma } from "../../../lib/prisma"
 
 export async function GET(req: Request) {
@@ -10,7 +10,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ verified: false })
     }
 
-    // РС‰РµРј РїРѕСЃР»РµРґРЅРёР№ РєРѕРґ РґР»СЏ СЌС‚РѕРіРѕ С‚РµР»РµС„РѕРЅР°, СЃРѕР·РґР°РЅРЅС‹Р№ Р·Р° РїРѕСЃР»РµРґРЅСЋСЋ РјРёРЅСѓС‚Сѓ
+    // Ищем последний код для этого телефона, созданный за последнюю минуту
     const oneMinuteAgo = new Date(Date.now() - 60 * 1000)
     
     const otp = await prisma.otpCode.findFirst({

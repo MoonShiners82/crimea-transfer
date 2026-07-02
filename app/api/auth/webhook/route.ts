@@ -1,43 +1,43 @@
-п»їimport { NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { prisma } from "../../../lib/prisma"
 
 export async function POST(req: Request) {
   try {
     const body = await req.text()
-    console.log("рџ“Ґ OnlinePBX webhook (raw):", body)
+    console.log("?? OnlinePBX webhook (raw):", body)
 
     let data
     try {
       data = JSON.parse(body)
     } catch {
-      console.log("вљ пёЏ РќРµ JSON, РІРѕР·РІСЂР°С‰Р°РµРј СѓСЃРїРµС… РґР»СЏ С‚РµСЃС‚Р°")
+      console.log("?? Не JSON, возвращаем успех для теста")
       return NextResponse.json({ success: true })
     }
 
-    console.log("рџ“Ґ Webhook РґР°РЅРЅС‹Рµ:", JSON.stringify(data, null, 2))
+    console.log("?? Webhook данные:", JSON.stringify(data, null, 2))
 
-    // РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ СЌС‚Рѕ РЅРµ С‚РµСЃС‚РѕРІС‹Р№ Р·Р°РїСЂРѕСЃ
+    // Проверяем, что это не тестовый запрос
     if (data.test || data.type === "test") {
-      console.log("вњ… РўРµСЃС‚РѕРІС‹Р№ РІРµР±С…СѓРє РїСЂРёРЅСЏС‚")
+      console.log("? Тестовый вебхук принят")
       return NextResponse.json({ success: true, message: "Test OK" })
     }
 
-    // РР·РІР»РµРєР°РµРј РЅРѕРјРµСЂ Р·РІРѕРЅСЏС‰РµРіРѕ
+    // Извлекаем номер звонящего
     const callerNumber = data.from || data.caller_id || data.src || data.caller || data.phone || data.caller_number || data.caller_id_number
     if (!callerNumber) {
-      console.log("вљ пёЏ РќРµ РЅР°Р№РґРµРЅ РЅРѕРјРµСЂ Р·РІРѕРЅСЏС‰РµРіРѕ, РЅРѕ РІРѕР·РІСЂР°С‰Р°РµРј СѓСЃРїРµС…")
+      console.log("?? Не найден номер звонящего, но возвращаем успех")
       return NextResponse.json({ success: true })
     }
 
-    // РќРѕСЂРјР°Р»РёР·СѓРµРј РЅРѕРјРµСЂ
+    // Нормализуем номер
     let cleanPhone = callerNumber.replace(/\D/g, "")
     if (cleanPhone.startsWith("8")) cleanPhone = "7" + cleanPhone.slice(1)
     if (!cleanPhone.startsWith("7")) cleanPhone = "7" + cleanPhone
     const formattedPhone = "+" + cleanPhone
 
-    console.log("вњ… Р—РІРѕРЅРѕРє РѕС‚: " + formattedPhone)
+    console.log("? Звонок от: " + formattedPhone)
 
-    // Р“РµРЅРµСЂРёСЂСѓРµРј РєРѕРґ Рё СЃРѕС…СЂР°РЅСЏРµРј РІ Р‘Р”
+    // Генерируем код и сохраняем в БД
     const code = Math.floor(1000 + Math.random() * 9000).toString()
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000)
 
@@ -50,17 +50,17 @@ export async function POST(req: Request) {
       }
     })
 
-    console.log("вњ… РљРѕРґ РґР»СЏ " + formattedPhone + ": " + code)
+    console.log("? Код для " + formattedPhone + ": " + code)
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("вќЊ Webhook error:", error)
-    // Р’РѕР·РІСЂР°С‰Р°РµРј СѓСЃРїРµС… РґР°Р¶Рµ РїСЂРё РѕС€РёР±РєРµ, С‡С‚РѕР±С‹ РЅРµ Р»РѕРјР°С‚СЊ webhook
+    console.error("? Webhook error:", error)
+    // Возвращаем успех даже при ошибке, чтобы не ломать webhook
     return NextResponse.json({ success: true, error: String(error) })
   }
 }
 
-// Р”РѕР±Р°РІР»СЏРµРј GET РґР»СЏ С‚РµСЃС‚Р°
+// Добавляем GET для теста
 export async function GET() {
   return NextResponse.json({ status: "OK", message: "Webhook endpoint is working" })
 }

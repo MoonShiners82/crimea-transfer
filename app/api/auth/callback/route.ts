@@ -1,4 +1,4 @@
-п»їimport { NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { prisma } from "../../../lib/prisma"
 
 export async function POST(req: Request) {
@@ -13,13 +13,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Phone required" }, { status: 400 })
     }
 
-    // РќРѕСЂРјР°Р»РёР·СѓРµРј РЅРѕРјРµСЂ (СѓР±РёСЂР°РµРј РІСЃС‘ РєСЂРѕРјРµ С†РёС„СЂ, РґРѕР±Р°РІР»СЏРµРј +7)
+    // Нормализуем номер (убираем всё кроме цифр, добавляем +7)
     let cleanPhone = phone.replace(/\D/g, "")
     if (cleanPhone.startsWith("8")) cleanPhone = "7" + cleanPhone.slice(1)
     if (!cleanPhone.startsWith("7")) cleanPhone = "7" + cleanPhone
     const formattedPhone = "+" + cleanPhone
 
-    // Р“РµРЅРµСЂРёСЂСѓРµРј РєРѕРґ Рё СЃРѕС…СЂР°РЅСЏРµРј РІ Р‘Р”
+    // Генерируем код и сохраняем в БД
     const code = Math.floor(1000 + Math.random() * 9000).toString()
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000)
 
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
       }
     })
 
-    console.log("вњ… РџСЂРёРЅСЏС‚ Р·РІРѕРЅРѕРє РѕС‚ " + formattedPhone + ". РљРѕРґ: " + code)
+    console.log("? Принят звонок от " + formattedPhone + ". Код: " + code)
 
     return NextResponse.json({ success: true })
   } catch (error) {

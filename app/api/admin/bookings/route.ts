@@ -1,4 +1,4 @@
-п»їimport { NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "../../../lib/auth"
 import { prisma } from "../../../lib/prisma"
@@ -9,7 +9,7 @@ export async function GET() {
 
     if (!session?.user) {
       return NextResponse.json(
-        { error: "РќРµРѕР±С…РѕРґРёРјР° Р°РІС‚РѕСЂРёР·Р°С†РёСЏ" },
+        { error: "Необходима авторизация" },
         { status: 401 }
       )
     }
@@ -20,7 +20,7 @@ export async function GET() {
 
     if (!user || user.role !== "admin") {
       return NextResponse.json(
-        { error: "Р”РѕСЃС‚СѓРї Р·Р°РїСЂРµС‰С‘РЅ" },
+        { error: "Доступ запрещён" },
         { status: 403 }
       )
     }
@@ -49,7 +49,7 @@ export async function GET() {
   } catch (error) {
     console.error("Get bookings error:", error)
     return NextResponse.json(
-      { error: "РћС€РёР±РєР° СЃРµСЂРІРµСЂР°" },
+      { error: "Ошибка сервера" },
       { status: 500 }
     )
   }

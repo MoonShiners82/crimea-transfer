@@ -1,4 +1,4 @@
-п»їimport { NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { prisma } from "../../../lib/prisma"
 
 export async function GET(req: Request) {
@@ -17,7 +17,7 @@ export async function GET(req: Request) {
     const email = "vl.dut.crimea@gmail.com"
 
     if (!apiKey || !callbackPhone || !sipDomain) {
-      console.error("вќЊ OnlinePBX РЅРµ РЅР°СЃС‚СЂРѕРµРЅ")
+      console.error("? OnlinePBX не настроен")
       return NextResponse.json({ verified: false, error: "Not configured" })
     }
 
@@ -32,11 +32,11 @@ export async function GET(req: Request) {
     formData.append("start_stamp_to", nowTimestamp.toString())
     formData.append("accountcode", "inbound")
 
-    console.log("рџ“ћ Р—Р°РїСЂРѕСЃ Рє OnlinePBX:", apiUrl)
+    console.log("?? Запрос к OnlinePBX:", apiUrl)
 
-    // РџСЂРѕР±СѓРµРј РЅРµСЃРєРѕР»СЊРєРѕ РјРµС‚РѕРґРѕРІ
+    // Пробуем несколько методов
     const methods = [
-      // РњРµС‚РѕРґ 1: Basic Auth СЃ email:api_key
+      // Метод 1: Basic Auth с email:api_key
       {
         name: "Basic Auth (email:apiKey)",
         headers: {
@@ -44,7 +44,7 @@ export async function GET(req: Request) {
           "Authorization": `Basic ${Buffer.from(`${email}:${apiKey}`).toString('base64')}`
         }
       },
-      // РњРµС‚РѕРґ 2: apiKey РІ query string
+      // Метод 2: apiKey в query string
       {
         name: "Query param apiKey",
         headers: {
@@ -52,7 +52,7 @@ export async function GET(req: Request) {
         },
         url: `${apiUrl}?apiKey=${apiKey}`
       },
-      // РњРµС‚РѕРґ 3: api_key РІ query string
+      // Метод 3: api_key в query string
       {
         name: "Query param api_key",
         headers: {
@@ -63,7 +63,7 @@ export async function GET(req: Request) {
     ]
 
     for (const method of methods) {
-      console.log(`рџ”ђ РџСЂРѕР±СѓРµРј: ${method.name}`)
+      console.log(`?? Пробуем: ${method.name}`)
       
       const url = method.url || apiUrl
       const response = await fetch(url, {
@@ -73,10 +73,10 @@ export async function GET(req: Request) {
       })
 
       const responseText = await response.text()
-      console.log(`рџ“Ґ РћС‚РІРµС‚ (${response.status}):`, responseText.slice(0, 300))
+      console.log(`?? Ответ (${response.status}):`, responseText.slice(0, 300))
 
       if (response.ok && !responseText.includes("not authorized")) {
-        console.log(`вњ… РњРµС‚РѕРґ СЃСЂР°Р±РѕС‚Р°Р»: ${method.name}`)
+        console.log(`? Метод сработал: ${method.name}`)
         
         try {
           const data = JSON.parse(responseText)
@@ -89,7 +89,7 @@ export async function GET(req: Request) {
           })
 
           if (foundCall) {
-            console.log("вњ… РќР°Р№РґРµРЅ Р·РІРѕРЅРѕРє РѕС‚", phone)
+            console.log("? Найден звонок от", phone)
             const code = Math.floor(1000 + Math.random() * 9000).toString()
             const expiresAt = new Date(Date.now() + 5 * 60 * 1000)
 
@@ -102,7 +102,7 @@ export async function GET(req: Request) {
 
           return NextResponse.json({ verified: false })
         } catch (parseError) {
-          console.error("вќЊ РћС€РёР±РєР° РїР°СЂСЃРёРЅРіР°:", responseText)
+          console.error("? Ошибка парсинга:", responseText)
         }
       }
     }

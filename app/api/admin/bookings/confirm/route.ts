@@ -1,4 +1,4 @@
-п»їimport { NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "../../../lib/auth"
 import { prisma } from "../../../lib/prisma"
@@ -9,7 +9,7 @@ export async function POST(req: Request) {
 
     if (!session?.user) {
       return NextResponse.json(
-        { error: "РќРµРѕР±С…РѕРґРёРјР° Р°РІС‚РѕСЂРёР·Р°С†РёСЏ" },
+        { error: "Необходима авторизация" },
         { status: 401 }
       )
     }
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
 
     if (!user || user.role !== "admin") {
       return NextResponse.json(
-        { error: "Р”РѕСЃС‚СѓРї Р·Р°РїСЂРµС‰С‘РЅ" },
+        { error: "Доступ запрещён" },
         { status: 403 }
       )
     }
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
 
     if (!bookingId || !driverName || !driverPhone || !carInfo || !priceFinal) {
       return NextResponse.json(
-        { error: "Р’СЃРµ РїРѕР»СЏ РѕР±СЏР·Р°С‚РµР»СЊРЅС‹" },
+        { error: "Все поля обязательны" },
         { status: 400 }
       )
     }
@@ -65,7 +65,7 @@ export async function POST(req: Request) {
         const https = require('https')
         const agent = new https.Agent({ rejectUnauthorized: false })
 
-        const smsText = `Р‘СЂРѕРЅСЊ N${booking.id.slice(-6)} РїРѕРґС‚РІРµСЂР¶РґРµРЅР°! Р’РѕРґРёС‚РµР»СЊ: ${driverName}, С‚РµР»: ${driverPhone}, Р°РІС‚Рѕ: ${carInfo}, СЃС‚РѕРёРјРѕСЃС‚СЊ: ${priceFinal} СЂСѓР±.`
+        const smsText = `Бронь N${booking.id.slice(-6)} подтверждена! Водитель: ${driverName}, тел: ${driverPhone}, авто: ${carInfo}, стоимость: ${priceFinal} руб.`
 
         await fetch("https://api.greensms.ru/sms/send", {
           method: "POST",
@@ -81,19 +81,19 @@ export async function POST(req: Request) {
           agent
         })
 
-        console.log("вњ… SMS РѕС‚РїСЂР°РІР»РµРЅРѕ РєР»РёРµРЅС‚Сѓ " + booking.user.phone)
+        console.log("? SMS отправлено клиенту " + booking.user.phone)
       } catch (smsError) {
         console.error("SMS error:", smsError)
       }
     }
 
-    console.log("вњ… Р—Р°СЏРІРєР° N" + booking.id.slice(-6) + " РїРѕРґС‚РІРµСЂР¶РґРµРЅР°")
+    console.log("? Заявка N" + booking.id.slice(-6) + " подтверждена")
 
     return NextResponse.json({ success: true, booking })
   } catch (error) {
     console.error("Confirm booking error:", error)
     return NextResponse.json(
-      { error: "РћС€РёР±РєР° СЃРµСЂРІРµСЂР°" },
+      { error: "Ошибка сервера" },
       { status: 500 }
     )
   }

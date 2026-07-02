@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { prisma } from "../../../lib/prisma"
 
 export async function POST(req: Request) {
@@ -19,17 +19,17 @@ export async function POST(req: Request) {
 
     let price = route.priceBase
 
-    // Р”РѕРїР»Р°С‚Р° Р·Р° РїР°СЃСЃР°Р¶РёСЂРѕРІ СЃРІРµСЂС… 4
+    // Доплата за пассажиров сверх 4
     if (passengers > 4) {
       price += (passengers - 4) * 300
     }
 
-    // Р”РѕРїР»Р°С‚Р° Р·Р° Р±Р°РіР°Р¶
+    // Доплата за багаж
     if (baggage === "1") price += route.pricePerBaggage
     if (baggage === "2plus") price += route.pricePerBaggage * 2
     if (baggage === "oversized") price += route.pricePerBaggage * 3
 
-    // РќРѕС‡РЅРѕР№ РєРѕСЌС„С„РёС†РёРµРЅС‚ (23:00вЂ“06:00)
+    // Ночной коэффициент (23:00–06:00)
     if (datetime) {
       const hour = new Date(datetime).getHours()
       if (hour >= 23 || hour < 6) {
