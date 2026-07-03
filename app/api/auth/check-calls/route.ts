@@ -68,7 +68,7 @@ export async function GET(req: Request) {
       const url = method.url || apiUrl
       const response = await fetch(url, {
         method: "POST",
-        headers: method.headers,
+        headers: method.headers as Record<string, string>,
         body: formData.toString()
       })
 
