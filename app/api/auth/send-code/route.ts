@@ -10,19 +10,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Телефон обязателен" }, { status: 400 })
     }
 
-    // Генерируем 4-значный код
     const code = Math.floor(1000 + Math.random() * 9000).toString()
 
-    // Сохраняем код в БД
     await prisma.otpCode.create({
       data: {
         phone,
         code,
-        expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 минут
+        expiresAt: new Date(Date.now() + 5 * 60 * 1000),
       }
     })
 
-    // Отправляем SMS
     const result = await sendSms(phone, code)
 
     if (!result.success) {

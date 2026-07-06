@@ -2,8 +2,8 @@ const SMSPILOT_API_KEY = process.env.SMSPILOT_API_KEY
 const SMSPILOT_SENDER = process.env.SMSPILOT_SENDER || 'INFORM'
 
 export async function sendSms(phone: string, code: string) {
-  const message = Ваш код для входа: 
-  const url = https://smspilot.ru/api.php?send=&to=&from=&apikey=&format=json
+  const message = `Ваш код для входа: ${code}`
+  const url = `https://smspilot.ru/api.php?send=${encodeURIComponent(message)}&to=${encodeURIComponent(phone)}&from=${encodeURIComponent(SMSPILOT_SENDER)}&apikey=${SMSPILOT_API_KEY}&format=json`
 
   try {
     const response = await fetch(url, { method: 'GET' })

@@ -47,3 +47,5 @@ ngrok/
 ngrok/
 
 ngrok/
+
+.env.local
