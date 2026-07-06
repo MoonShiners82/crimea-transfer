@@ -1,9 +1,11 @@
-import { NextResponse } from "next/server"`nimport { getServerSession } from "next-auth"
+import { NextResponse } from "next/server"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
 export async function GET(req: Request) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await getServerSession(req, authOptions)
 
     if (!session?.user) {
       return NextResponse.json(
@@ -25,30 +27,15 @@ export async function GET(req: Request) {
 
     const bookings = await prisma.booking.findMany({
       include: {
-        user: {
-          select: {
-            phone: true,
-            name: true
-          }
-        },
-        route: {
-          select: {
-            fromPoint: true,
-            toPoint: true
-          }
-        }
+        user: { select: { phone: true, name: true } },
+        route: { select: { fromPoint: true, toPoint: true } }
       },
-      orderBy: {
-        createdAt: "desc"
-      }
+      orderBy: { createdAt: "desc" }
     })
 
     return NextResponse.json(bookings)
   } catch (error) {
     console.error("Get bookings error:", error)
-    return NextResponse.json(
-      { error: "Ошибка сервера" },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: "Ошибка сервера" }, { status: 500 })
   }
 }

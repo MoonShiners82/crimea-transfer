@@ -1,9 +1,11 @@
-import { NextResponse } from "next/server"`nimport { getServerSession } from "next-auth"
+import { NextResponse } from "next/server"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await getServerSession(req, authOptions)
 
     if (!session?.user) {
       return NextResponse.json(
@@ -43,26 +45,14 @@ export async function POST(req: Request) {
         confirmedAt: new Date()
       },
       include: {
-        user: {
-          select: {
-            phone: true
-          }
-        },
-        route: {
-          select: {
-            fromPoint: true,
-            toPoint: true
-          }
-        }
+        user: { select: { phone: true } },
+        route: { select: { fromPoint: true, toPoint: true } }
       }
     })
 
     return NextResponse.json({ success: true, booking })
   } catch (error) {
     console.error("Confirm booking error:", error)
-    return NextResponse.json(
-      { error: "Ошибка сервера" },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: "Ошибка сервера" }, { status: 500 })
   }
 }
