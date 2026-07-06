@@ -1,8 +1,8 @@
-import NextAuth from "next-auth"
+import NextAuth, { type NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { prisma } from "./prisma"
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: "SMS Code",
@@ -22,27 +22,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: {
             phone,
             isUsed: false,
-            expiresAt: {
-              gt: new Date()
-            }
+            expiresAt: { gt: new Date() }
           },
-          orderBy: {
-            createdAt: 'desc'
-          }
+          orderBy: { createdAt: 'desc' }
         })
 
-        if (!otp) {
-          return null
-        }
+        if (!otp) return null
 
         if (otp.code === "flashcall") {
-          if (code.length !== 4 || !/^\d{4}$/.test(code)) {
-            return null
-          }
+          if (code.length !== 4 || !/^\d{4}$/.test(code)) return null
         } else {
-          if (otp.code !== code) {
-            return null
-          }
+          if (otp.code !== code) return null
         }
 
         await prisma.otpCode.update({
@@ -50,30 +40,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           data: { isUsed: true }
         })
 
-        let user = await prisma.user.findUnique({
-          where: { phone }
-        })
-
+        let user = await prisma.user.findUnique({ where: { phone } })
         if (!user) {
-          user = await prisma.user.create({
-            data: { phone }
-          })
+          user = await prisma.user.create({ data: { phone } })
         }
 
-        return {
-          id: user.id,
-          phone: user.phone,
-          name: user.name
-        }
+        return { id: user.id, phone: user.phone, name: user.name }
       }
     })
   ],
-  session: {
-    strategy: "jwt"
-  },
-  pages: {
-    signIn: '/auth/signin',
-  },
+  session: { strategy: "jwt" },
+  pages: { signIn: '/auth/signin' },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
@@ -91,4 +68,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }
   },
   secret: process.env.NEXTAUTH_SECRET,
-})
+}
+
+export default NextAuth(authOptions)
