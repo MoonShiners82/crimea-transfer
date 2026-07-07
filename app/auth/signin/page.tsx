@@ -1,20 +1,25 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
+import { signIn } from "next-auth/react"
 
 export default function SignInPage() {
   const router = useRouter()
   const [phone, setPhone] = useState("")
-  const [code, setCode] = useState("")
-  const [step, setStep] = useState<"phone" | "code">("phone")
+  const [step, setStep] = useState<"phone" | "call">("phone")
+  const [callTo, setCallTo] = useState("")
+  const [requestId, setRequestId] = useState("")
   const [message, setMessage] = useState("")
   const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [checking, setChecking] = useState(false)
 
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     setMessage("")
+    setLoading(true)
 
     try {
       const res = await fetch("/api/auth/send-code", {
@@ -26,42 +31,69 @@ export default function SignInPage() {
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.error || "Ошибка отправки кода")
+        setError(data.error || "Ошибка")
         return
       }
 
-      setStep("code")
-      setMessage("Код отправлен на указанный номер")
-    } catch (err) {
+      setCallTo(data.callTo)
+      setRequestId(data.requestId)
+      setStep("call")
+      setMessage("Позвоните на указанный номер с вашего телефона")
+    } catch {
       setError("Ошибка сервера")
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleVerifyCode = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleVerify = useCallback(async () => {
+    if (!requestId) return
+    setChecking(true)
     setError("")
-    setMessage("")
 
     try {
-      const res = await fetch("/api/auth/callback", {
+      const res = await fetch("/api/auth/verify-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, code })
+        body: JSON.stringify({ phone, requestId })
       })
 
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.error || "Неверный код")
+        if (data.error?.includes("ещё не поступил")) {
+          return
+        }
+        setError(data.error || "Ошибка")
+        return
+      }
+
+      const signInResult = await signIn("credentials", {
+        phone,
+        verificationToken: data.verificationToken,
+        redirect: false,
+      })
+
+      if (signInResult?.error) {
+        setError("Ошибка авторизации")
         return
       }
 
       router.push("/")
       router.refresh()
-    } catch (err) {
+    } catch {
       setError("Ошибка сервера")
+    } finally {
+      setChecking(false)
     }
-  }
+  }, [phone, requestId, router])
+
+  useEffect(() => {
+    if (step !== "call" || !requestId) return
+
+    const interval = setInterval(handleVerify, 3000)
+    return () => clearInterval(interval)
+  }, [step, requestId, handleVerify])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -71,7 +103,7 @@ export default function SignInPage() {
             Вход в систему
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Авторизация через SMS
+            Подтверждение через звонок
           </p>
         </div>
 
@@ -95,47 +127,89 @@ export default function SignInPage() {
 
             <button
               type="submit"
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              disabled={loading}
+              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
             >
-              Отправить код
+              {loading ? "Отправка..." : "Получить номер для звонка"}
             </button>
           </form>
         ) : (
-          <form className="mt-8 space-y-6" onSubmit={handleVerifyCode}>
-            <div>
-              <label htmlFor="code" className="block text-sm font-medium text-gray-700">
-                Код из SMS
-              </label>
-              <input
-                id="code"
-                name="code"
-                type="text"
-                required
-                maxLength={4}
-                placeholder="0000"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
+          <div className="mt-8 space-y-6">
+            <div className="text-center">
+              <p className="text-sm text-gray-600 mb-4">
+                Позвоните на этот номер с вашего телефона:
+              </p>
+              <p className="text-3xl font-bold text-blue-600 tracking-wider">
+                {callTo}
+              </p>
+              <p className="text-sm text-gray-500 mt-2">
+                Звонок бесплатный. Код подтверждения не требуется.
+              </p>
             </div>
 
-            {message && <p className="text-sm text-green-600">{message}</p>}
+            {message && <p className="text-sm text-green-600 text-center">{message}</p>}
+
+            {checking && (
+              <div className="flex items-center justify-center space-x-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                <span className="text-sm text-gray-500">Ожидание звонка...</span>
+              </div>
+            )}
 
             <button
-              type="submit"
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              onClick={handleVerify}
+              disabled={checking}
+              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
             >
-              Войти
+              Я позвонил, проверить
             </button>
 
-            <button
-              type="button"
-              onClick={() => setStep("phone")}
-              className="w-full text-sm text-gray-600 hover:text-gray-900"
-            >
-              Изменить номер
-            </button>
-          </form>
+            <div className="flex justify-between">
+              <button
+                type="button"
+                onClick={() => {
+                  setStep("phone")
+                  setCallTo("")
+                  setRequestId("")
+                  setError("")
+                  setMessage("")
+                }}
+                className="text-sm text-gray-600 hover:text-gray-900"
+              >
+                Изменить номер
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setError("")
+                  setMessage("")
+                  setLoading(true)
+                  try {
+                    const res = await fetch("/api/auth/send-code", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ phone })
+                    })
+                    const data = await res.json()
+                    if (!res.ok) {
+                      setError(data.error || "Ошибка")
+                    } else {
+                      setCallTo(data.callTo)
+                      setRequestId(data.requestId)
+                      setMessage("Новый номер получен")
+                    }
+                  } catch {
+                    setError("Ошибка сервера")
+                  } finally {
+                    setLoading(false)
+                  }
+                }}
+                className="text-sm text-blue-600 hover:text-blue-800"
+              >
+                Получить новый номер
+              </button>
+            </div>
+          </div>
         )}
 
         {error && <p className="text-sm text-red-600 text-center">{error}</p>}

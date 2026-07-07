@@ -1,8 +1,9 @@
-﻿"use client"
+"use client"
 
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 
 type Booking = {
   id: string
@@ -26,11 +27,20 @@ type Booking = {
   }
 }
 
+const statusOptions = [
+  { value: "", label: "Все" },
+  { value: "pending", label: "Ожидают" },
+  { value: "confirmed", label: "Подтверждённые" },
+  { value: "completed", label: "Завершённые" },
+  { value: "cancelled", label: "Отменённые" },
+]
+
 export default function AdminPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
+  const [filterStatus, setFilterStatus] = useState("")
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [driverName, setDriverName] = useState("")
   const [driverPhone, setDriverPhone] = useState("")
@@ -48,11 +58,14 @@ export default function AdminPage() {
     if (status === "authenticated") {
       fetchBookings()
     }
-  }, [status])
+  }, [status, filterStatus])
 
   const fetchBookings = async () => {
     try {
-      const res = await fetch("/api/admin/bookings")
+      const url = filterStatus
+        ? `/api/admin/bookings?status=${filterStatus}`
+        : "/api/admin/bookings"
+      const res = await fetch(url)
       if (res.status === 403) {
         alert("Доступ запрещён. Вы не администратор.")
         router.push("/")
@@ -87,7 +100,7 @@ export default function AdminPage() {
       })
 
       if (res.ok) {
-        alert("Заявка подтверждена! SMS отправлено клиенту.")
+        alert("Заявка подтверждена!")
         setSelectedBooking(null)
         setDriverName("")
         setDriverPhone("")
@@ -127,7 +140,7 @@ export default function AdminPage() {
   if (status === "loading" || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        Загрузка...
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     )
   }
@@ -137,12 +150,39 @@ export default function AdminPage() {
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Админ-панель</h1>
-          <button
-            onClick={() => router.push("/")}
-            className="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300"
-          >
-            На главную
-          </button>
+          <div className="flex gap-2">
+            <Link
+              href="/admin/background-check"
+              className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition"
+            >
+              Проверка данных
+            </Link>
+            <Link
+              href="/"
+              className="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300 transition"
+            >
+              На главную
+            </Link>
+          </div>
+        </div>
+
+        <div className="flex gap-2 mb-6">
+          {statusOptions.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setFilterStatus(opt.value)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                filterStatus === opt.value
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-100 border"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+          <span className="ml-auto text-sm text-gray-500 self-center">
+            Заявок: {bookings.length}
+          </span>
         </div>
 
         <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -175,7 +215,7 @@ export default function AdminPage() {
                     {booking.user.phone}
                   </td>
                   <td className="px-4 py-3 text-sm">
-                    {booking.passengers} чел., {booking.baggageType}
+                    {booking.passengers} чел.
                   </td>
                   <td className="px-4 py-3 text-sm">
                     {booking.priceFinal || booking.priceCalculated} ₽
@@ -215,7 +255,7 @@ export default function AdminPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <h2 className="text-xl font-bold mb-4">
-              Подтверждение заявки N{selectedBooking.id.slice(-6)}
+              Подтверждение заявки #{selectedBooking.id.slice(-6)}
             </h2>
 
             <div className="bg-gray-50 p-3 rounded mb-4 text-sm">
@@ -227,9 +267,7 @@ export default function AdminPage() {
 
             <form onSubmit={handleConfirm} className="space-y-3">
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Имя водителя
-                </label>
+                <label className="block text-sm font-medium mb-1">Имя водителя</label>
                 <input
                   type="text"
                   value={driverName}
@@ -240,9 +278,7 @@ export default function AdminPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Телефон водителя
-                </label>
+                <label className="block text-sm font-medium mb-1">Телефон водителя</label>
                 <input
                   type="tel"
                   value={driverPhone}
@@ -254,9 +290,7 @@ export default function AdminPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Автомобиль
-                </label>
+                <label className="block text-sm font-medium mb-1">Автомобиль</label>
                 <input
                   type="text"
                   value={carInfo}
@@ -268,9 +302,7 @@ export default function AdminPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Итоговая цена (руб)
-                </label>
+                <label className="block text-sm font-medium mb-1">Итоговая цена (руб)</label>
                 <input
                   type="number"
                   value={priceFinal}
@@ -309,5 +341,3 @@ export default function AdminPage() {
     </div>
   )
 }
-
-

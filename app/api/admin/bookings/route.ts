@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma"
 
 export async function GET(req: Request) {
   try {
-    const session = await getServerSession(req, authOptions)
+    const session = await getServerSession(authOptions)
 
     if (!session?.user) {
       return NextResponse.json(
@@ -25,7 +25,13 @@ export async function GET(req: Request) {
       )
     }
 
+    const { searchParams } = new URL(req.url)
+    const status = searchParams.get("status")
+
+    const where = status ? { status } : {}
+
     const bookings = await prisma.booking.findMany({
+      where,
       include: {
         user: { select: { phone: true, name: true } },
         route: { select: { fromPoint: true, toPoint: true } }

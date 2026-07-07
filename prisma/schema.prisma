@@ -59,3 +59,24 @@ model OtpCode {
   isUsed    Boolean   @default(false)
   createdAt DateTime  @default(now())
 }
+
+model VerificationToken {
+  id        String    @id @default(cuid())
+  phone     String
+  token     String    @unique
+  expiresAt DateTime
+  isUsed    Boolean   @default(false)
+  createdAt DateTime  @default(now())
+}
+
+model BackgroundCheck {
+  id              String    @id @default(cuid())
+  fullName        String
+  passportNumber  String
+  birthDate       String
+  hasRecord       Boolean
+  recordType      String?
+  details         String?
+  checkedAt       DateTime  @default(now())
+  checkedBy       String?
+}

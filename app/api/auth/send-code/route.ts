@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
-import { sendSms } from "@/lib/websms"
+import { requestCallback } from "@/lib/plusofon"
+
+function normalizePhone(phone: string): string {
+  let clean = phone.replace(/\D/g, "")
+  if (clean.startsWith("8")) clean = "7" + clean.slice(1)
+  if (!clean.startsWith("7")) clean = "7" + clean
+  return "+" + clean
+}
 
 export async function POST(req: Request) {
   try {
@@ -10,27 +16,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Телефон обязателен" }, { status: 400 })
     }
 
-    const code = Math.floor(1000 + Math.random() * 9000).toString()
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000)
+    const normalizedPhone = normalizePhone(phone)
 
-    await prisma.otpCode.create({
-      data: {
-        phone,
-        code,
-        expiresAt,
-        isUsed: false,
-      }
+    const result = await requestCallback(normalizedPhone)
+
+    console.log(`Callback requested for ${normalizedPhone}, request_id: ${result.request_id}`)
+
+    return NextResponse.json({
+      success: true,
+      message: "Вам будет показан номер для звонка. Позвоните на него с вашего телефона для подтверждения.",
+      requestId: result.request_id,
+      callTo: result.phone,
     })
-
-    const result = await sendSms(phone, code)
-
-    if (!result.success) {
-      return NextResponse.json({ error: result.error || "Ошибка отправки SMS" }, { status: 500 })
-    }
-
-    return NextResponse.json({ success: true, message: "Код отправлен" })
   } catch (error) {
     console.error("Send code error:", error)
-    return NextResponse.json({ error: String(error) }, { status: 500 })
+    return NextResponse.json(
+      { error: "Ошибка отправки кода. Попробуйте позже." },
+      { status: 500 }
+    )
   }
 }

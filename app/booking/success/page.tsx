@@ -29,7 +29,7 @@ function SuccessContent() {
 
         <h1 className="text-2xl font-bold mb-2">Заявка принята!</h1>
         <p className="text-gray-600 mb-6">
-          Номер заявки: <span className="font-mono font-bold">№{bookingId}</span>
+          Номер заявки: <span className="font-mono font-bold">#{bookingId.slice(-6).toUpperCase()}</span>
         </p>
 
         <div className="bg-blue-50 p-4 rounded mb-6 text-left">

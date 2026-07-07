@@ -5,47 +5,48 @@ import { prisma } from "./prisma"
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
-      name: "SMS Code",
+      name: "Callback",
       credentials: {
         phone: { label: "Phone", type: "tel" },
-        code: { label: "Code", type: "text" }
+        verificationToken: { label: "Verification Token", type: "text" }
       },
       async authorize(credentials) {
-        if (!credentials?.phone || !credentials?.code) {
+        if (!credentials?.phone || !credentials?.verificationToken) {
           return null
         }
 
         const phone = credentials.phone as string
-        const code = credentials.code as string
+        const token = credentials.verificationToken as string
 
-        const otp = await prisma.otpCode.findFirst({
-          where: {
-            phone,
-            isUsed: false,
-            expiresAt: { gt: new Date() }
-          },
-          orderBy: { createdAt: 'desc' }
+        let clean = phone.replace(/\D/g, "")
+        if (clean.startsWith("8")) clean = "7" + clean.slice(1)
+        if (!clean.startsWith("7")) clean = "7" + clean
+        const normalizedPhone = "+" + clean
+
+        const verificationToken = await prisma.verificationToken.findUnique({
+          where: { token }
         })
 
-        if (!otp) return null
-
-        if (otp.code === "flashcall") {
-          if (code.length !== 4 || !/^\d{4}$/.test(code)) return null
-        } else {
-          if (otp.code !== code) return null
+        if (
+          !verificationToken ||
+          verificationToken.phone !== normalizedPhone ||
+          verificationToken.isUsed ||
+          verificationToken.expiresAt < new Date()
+        ) {
+          return null
         }
 
-        await prisma.otpCode.update({
-          where: { id: otp.id },
+        await prisma.verificationToken.update({
+          where: { id: verificationToken.id },
           data: { isUsed: true }
         })
 
-        let user = await prisma.user.findUnique({ where: { phone } })
+        let user = await prisma.user.findUnique({ where: { phone: normalizedPhone } })
         if (!user) {
-          user = await prisma.user.create({ data: { phone } })
+          user = await prisma.user.create({ data: { phone: normalizedPhone } })
         }
 
-        return { id: user.id, phone: user.phone, name: user.name }
+        return { id: user.id, phone: user.phone, name: user.name, role: user.role }
       }
     })
   ],
@@ -55,7 +56,8 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id
-        token.phone = user.phone
+        token.phone = (user as any).phone
+        token.role = (user as any).role
       }
       return token
     },
@@ -63,6 +65,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         (session.user as any).id = token.id as string
         (session.user as any).phone = token.phone as string
+        (session.user as any).role = token.role as string
       }
       return session
     }
