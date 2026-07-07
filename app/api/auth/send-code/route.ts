@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { sendSms } from "@/lib/smspilot"
 
 export async function POST(req: Request) {
   try {
@@ -20,15 +19,11 @@ export async function POST(req: Request) {
       }
     })
 
-    const result = await sendSms(phone, code)
+    console.log("Код создан:", { phone, code })
 
-    if (!result.success) {
-      return NextResponse.json({ error: result.error || "Ошибка отправки SMS" }, { status: 500 })
-    }
-
-    return NextResponse.json({ success: true, message: "Код отправлен" })
+    return NextResponse.json({ success: true, message: "Код создан (тестовый режим)" })
   } catch (error) {
     console.error("Send code error:", error)
-    return NextResponse.json({ error: "Ошибка сервера" }, { status: 500 })
+    return NextResponse.json({ error: String(error) }, { status: 500 })
   }
 }
