@@ -101,14 +101,19 @@ export async function POST(req: Request) {
       )
     }
 
-    const baggageMultiplier: Record<string, number> = {
-      none: 1,
-      small: 1.1,
-      medium: 1.2,
-      large: 1.35,
+    let priceCalculated = route.priceBase
+    if (data.passengers > 4) {
+      priceCalculated += (data.passengers - 4) * 300
     }
-    const multiplier = baggageMultiplier[data.baggageType] || 1
-    const priceCalculated = Math.round(route.priceBase * multiplier)
+    if (data.baggageType === "1") priceCalculated += route.pricePerBaggage
+    if (data.baggageType === "2plus") priceCalculated += route.pricePerBaggage * 2
+    if (data.baggageType === "oversized") priceCalculated += route.pricePerBaggage * 3
+    if (data.datetime) {
+      const hour = new Date(data.datetime).getHours()
+      if (hour >= 23 || hour < 6) {
+        priceCalculated = Math.round(priceCalculated * 1.2)
+      }
+    }
 
     const booking = await prisma.booking.create({
       data: {
