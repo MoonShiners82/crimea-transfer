@@ -27,8 +27,23 @@ export async function GET(req: Request) {
 
     const { searchParams } = new URL(req.url)
     const status = searchParams.get("status")
+    const search = searchParams.get("search")
 
-    const where = status ? { status } : {}
+    const where: Record<string, unknown> = {}
+
+    if (status) {
+      where.status = status
+    }
+
+    if (search) {
+      where.OR = [
+        { user: { phone: { contains: search, mode: "insensitive" } } },
+        { user: { name: { contains: search, mode: "insensitive" } } },
+        { route: { fromPoint: { contains: search, mode: "insensitive" } } },
+        { route: { toPoint: { contains: search, mode: "insensitive" } } },
+        { driverName: { contains: search, mode: "insensitive" } }
+      ]
+    }
 
     const bookings = await prisma.booking.findMany({
       where,

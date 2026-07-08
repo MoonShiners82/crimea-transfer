@@ -49,6 +49,7 @@ model Booking {
   carInfo         String?
   createdAt       DateTime  @default(now())
   confirmedAt     DateTime?
+  cancelReason    String?
 }
 
 model OtpCode {

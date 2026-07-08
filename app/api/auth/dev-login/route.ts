@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
-import { PrismaClient } from "@prisma/client"
-
-const prisma = new PrismaClient()
+import { prisma } from "@/lib/prisma"
+import crypto from "crypto"
 
 // TEMPORARY: Remove before production!
 export async function POST(req: Request) {
@@ -19,11 +18,11 @@ export async function POST(req: Request) {
     const normalizedPhone = "+" + clean
 
     // Create verification token directly
-    const token = require("crypto").randomBytes(32).toString("hex")
+    const token = crypto.randomBytes(32).toString("hex")
 
     const verificationToken = await prisma.verificationToken.create({
       data: {
-        id: require("crypto").randomBytes(16).toString("hex"),
+        id: crypto.randomBytes(16).toString("hex"),
         phone: normalizedPhone,
         token,
         expiresAt: new Date(Date.now() + 5 * 60 * 1000),

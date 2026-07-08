@@ -17,6 +17,7 @@ type Booking = {
   driverPhone: string | null
   carInfo: string | null
   createdAt: string
+  cancelReason: string | null
   user: {
     phone: string
     name: string | null
@@ -25,6 +26,29 @@ type Booking = {
     fromPoint: string
     toPoint: string
   }
+}
+
+type Stats = {
+  bookings: {
+    total: number
+    pending: number
+    confirmed: number
+    completed: number
+    cancelled: number
+    today: number
+    week: number
+    month: number
+  }
+  revenue: {
+    total: number
+    today: number
+    average: number
+  }
+  users: {
+    total: number
+  }
+  popularRoutes: { fromPoint: string; toPoint: string; count: number }[]
+  recentBookings: Booking[]
 }
 
 const statusOptions = [
@@ -39,14 +63,19 @@ export default function AdminPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [bookings, setBookings] = useState<Booking[]>([])
+  const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState("")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [showDashboard, setShowDashboard] = useState(true)
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [driverName, setDriverName] = useState("")
   const [driverPhone, setDriverPhone] = useState("")
   const [carInfo, setCarInfo] = useState("")
   const [priceFinal, setPriceFinal] = useState("")
   const [confirming, setConfirming] = useState(false)
+  const [cancellingId, setCancellingId] = useState<string | null>(null)
+  const [completingId, setCompletingId] = useState<string | null>(null)
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -57,14 +86,16 @@ export default function AdminPage() {
   useEffect(() => {
     if (status === "authenticated") {
       fetchBookings()
+      fetchStats()
     }
-  }, [status, filterStatus])
+  }, [status, filterStatus, searchQuery])
 
   const fetchBookings = async () => {
     try {
-      const url = filterStatus
-        ? `/api/admin/bookings?status=${filterStatus}`
-        : "/api/admin/bookings"
+      const params = new URLSearchParams()
+      if (filterStatus) params.set("status", filterStatus)
+      if (searchQuery) params.set("search", searchQuery)
+      const url = `/api/admin/bookings${params.toString() ? `?${params.toString()}` : ""}`
       const res = await fetch(url)
       if (res.status === 403) {
         alert("Доступ запрещён. Вы не администратор.")
@@ -77,6 +108,18 @@ export default function AdminPage() {
       console.error("Fetch bookings error:", err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchStats = async () => {
+    try {
+      const res = await fetch("/api/admin/stats")
+      if (res.ok) {
+        const data = await res.json()
+        setStats(data)
+      }
+    } catch (err) {
+      console.error("Fetch stats error:", err)
     }
   }
 
@@ -117,6 +160,52 @@ export default function AdminPage() {
     }
   }
 
+  const handleCancel = async (bookingId: string) => {
+    if (!confirm("Отменить заявку?")) return
+
+    setCancellingId(bookingId)
+    try {
+      const res = await fetch("/api/admin/bookings/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId, status: "cancelled" })
+      })
+      if (res.ok) {
+        fetchBookings()
+        fetchStats()
+      } else {
+        alert("Ошибка отмены")
+      }
+    } catch {
+      alert("Ошибка сервера")
+    } finally {
+      setCancellingId(null)
+    }
+  }
+
+  const handleComplete = async (bookingId: string) => {
+    if (!confirm("Завершить заявку?")) return
+
+    setCompletingId(bookingId)
+    try {
+      const res = await fetch("/api/admin/bookings/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId, status: "completed" })
+      })
+      if (res.ok) {
+        fetchBookings()
+        fetchStats()
+      } else {
+        alert("Ошибка завершения")
+      }
+    } catch {
+      alert("Ошибка сервера")
+    } finally {
+      setCompletingId(null)
+    }
+  }
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "pending": return "bg-yellow-100 text-yellow-800"
@@ -151,6 +240,12 @@ export default function AdminPage() {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Админ-панель</h1>
           <div className="flex gap-2">
+            <button
+              onClick={() => setShowDashboard(!showDashboard)}
+              className={`px-4 py-2 rounded transition ${showDashboard ? "bg-blue-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
+            >
+              {showDashboard ? "Скрыть статистику" : "Показать статистику"}
+            </button>
             <Link
               href="/admin/background-check"
               className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition"
@@ -166,6 +261,93 @@ export default function AdminPage() {
           </div>
         </div>
 
+        {showDashboard && stats && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-4">Статистика</h2>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-white rounded-lg shadow p-4">
+                <div className="text-sm text-gray-500">Всего заявок</div>
+                <div className="text-2xl font-bold">{stats.bookings.total}</div>
+              </div>
+              <div className="bg-white rounded-lg shadow p-4">
+                <div className="text-sm text-gray-500">Ожидают</div>
+                <div className="text-2xl font-bold text-yellow-600">{stats.bookings.pending}</div>
+              </div>
+              <div className="bg-white rounded-lg shadow p-4">
+                <div className="text-sm text-gray-500">Подтверждены</div>
+                <div className="text-2xl font-bold text-green-600">{stats.bookings.confirmed}</div>
+              </div>
+              <div className="bg-white rounded-lg shadow p-4">
+                <div className="text-sm text-gray-500">Завершены</div>
+                <div className="text-2xl font-bold text-blue-600">{stats.bookings.completed}</div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-white rounded-lg shadow p-4">
+                <div className="text-sm text-gray-500">Отменены</div>
+                <div className="text-2xl font-bold text-red-600">{stats.bookings.cancelled}</div>
+              </div>
+              <div className="bg-white rounded-lg shadow p-4">
+                <div className="text-sm text-gray-500">Выручка</div>
+                <div className="text-2xl font-bold">{stats.revenue.total.toLocaleString("ru")} ₽</div>
+              </div>
+              <div className="bg-white rounded-lg shadow p-4">
+                <div className="text-sm text-gray-500">Средний чек</div>
+                <div className="text-2xl font-bold">{stats.revenue.average.toLocaleString("ru")} ₽</div>
+              </div>
+              <div className="bg-white rounded-lg shadow p-4">
+                <div className="text-sm text-gray-500">Пользователей</div>
+                <div className="text-2xl font-bold">{stats.users.total}</div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="bg-white rounded-lg shadow p-4">
+                <div className="text-sm text-gray-500">Сегодня</div>
+                <div className="text-lg font-semibold">{stats.bookings.today} заявок · {stats.revenue.today.toLocaleString("ru")} ₽</div>
+              </div>
+              <div className="bg-white rounded-lg shadow p-4">
+                <div className="text-sm text-gray-500">На этой неделе</div>
+                <div className="text-lg font-semibold">{stats.bookings.week} заявок</div>
+              </div>
+              <div className="bg-white rounded-lg shadow p-4">
+                <div className="text-sm text-gray-500">В этом месяце</div>
+                <div className="text-lg font-semibold">{stats.bookings.month} заявок</div>
+              </div>
+            </div>
+
+            {stats.popularRoutes.length > 0 && (
+              <div className="bg-white rounded-lg shadow p-4 mb-6">
+                <h3 className="font-semibold mb-3">Популярные маршруты</h3>
+                <div className="space-y-2">
+                  {stats.popularRoutes.map((route, i) => (
+                    <div key={i} className="flex justify-between items-center">
+                      <span>{route.fromPoint} → {route.toPoint}</span>
+                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">{route.count} заявок</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {stats.recentBookings.length > 0 && (
+              <div className="bg-white rounded-lg shadow p-4">
+                <h3 className="font-semibold mb-3">Последние заявки</h3>
+                <div className="space-y-2">
+                  {stats.recentBookings.map((b) => (
+                    <div key={b.id} className="flex justify-between items-center text-sm">
+                      <span>{b.user.phone} — {b.route.fromPoint} → {b.route.toPoint}</span>
+                      <span className={`px-2 py-1 rounded ${getStatusColor(b.status)}`}>{getStatusText(b.status)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="flex gap-2 mb-6">
           {statusOptions.map((opt) => (
             <button
@@ -180,9 +362,18 @@ export default function AdminPage() {
               {opt.label}
             </button>
           ))}
-          <span className="ml-auto text-sm text-gray-500 self-center">
-            Заявок: {bookings.length}
-          </span>
+          <div className="ml-auto flex items-center gap-2">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Поиск по телефону, имени, маршруту..."
+              className="px-4 py-2 border rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <span className="text-sm text-gray-500">
+              Заявок: {bookings.length}
+            </span>
+          </div>
         </div>
 
         <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -193,7 +384,9 @@ export default function AdminPage() {
                 <th className="px-4 py-3 text-left text-sm font-semibold">Дата поездки</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold">Маршрут</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold">Клиент</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Водитель</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold">Пассажиры</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Багаж</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold">Цена</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold">Статус</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold">Действия</th>
@@ -212,10 +405,28 @@ export default function AdminPage() {
                     {booking.route.fromPoint} → {booking.route.toPoint}
                   </td>
                   <td className="px-4 py-3 text-sm">
-                    {booking.user.phone}
+                    {booking.user.name && (
+                      <div className="font-medium">{booking.user.name}</div>
+                    )}
+                    <div className="text-gray-500">{booking.user.phone}</div>
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    {booking.driverName ? (
+                      <div>
+                        <div className="font-medium">{booking.driverName}</div>
+                        {booking.driverPhone && (
+                          <div className="text-gray-500 text-xs">{booking.driverPhone}</div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-sm">
                     {booking.passengers} чел.
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    {booking.baggageType === "none" ? "—" : booking.baggageType}
                   </td>
                   <td className="px-4 py-3 text-sm">
                     {booking.priceFinal || booking.priceCalculated} ₽
@@ -226,17 +437,37 @@ export default function AdminPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    {booking.status === "pending" && (
-                      <button
-                        onClick={() => {
-                          setSelectedBooking(booking)
-                          setPriceFinal(booking.priceCalculated.toString())
-                        }}
-                        className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
-                      >
-                        Подтвердить
-                      </button>
-                    )}
+                    <div className="flex gap-1">
+                      {booking.status === "pending" && (
+                        <button
+                          onClick={() => {
+                            setSelectedBooking(booking)
+                            setPriceFinal(booking.priceCalculated.toString())
+                          }}
+                          className="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700"
+                        >
+                          Подтвердить
+                        </button>
+                      )}
+                      {booking.status === "confirmed" && (
+                        <button
+                          onClick={() => handleComplete(booking.id)}
+                          disabled={completingId === booking.id}
+                          className="bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 disabled:bg-gray-400"
+                        >
+                          {completingId === booking.id ? "..." : "Завершить"}
+                        </button>
+                      )}
+                      {(booking.status === "pending" || booking.status === "confirmed") && (
+                        <button
+                          onClick={() => handleCancel(booking.id)}
+                          disabled={cancellingId === booking.id}
+                          className="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600 disabled:bg-gray-400"
+                        >
+                          {cancellingId === booking.id ? "..." : "Отмена"}
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -261,8 +492,9 @@ export default function AdminPage() {
             <div className="bg-gray-50 p-3 rounded mb-4 text-sm">
               <p><strong>Маршрут:</strong> {selectedBooking.route.fromPoint} → {selectedBooking.route.toPoint}</p>
               <p><strong>Дата:</strong> {new Date(selectedBooking.datetime).toLocaleString("ru")}</p>
-              <p><strong>Клиент:</strong> {selectedBooking.user.phone}</p>
+              <p><strong>Клиент:</strong> {selectedBooking.user.name && `${selectedBooking.user.name} — `}{selectedBooking.user.phone}</p>
               <p><strong>Пассажиры:</strong> {selectedBooking.passengers}</p>
+              <p><strong>Багаж:</strong> {selectedBooking.baggageType === "none" ? "Нет" : selectedBooking.baggageType}</p>
             </div>
 
             <form onSubmit={handleConfirm} className="space-y-3">
