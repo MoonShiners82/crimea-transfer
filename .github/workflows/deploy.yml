@@ -7,7 +7,7 @@ on:
 env:
   REGISTRY: cr.yandex.ru/bbahbe2vitdn4tlj9a5c
   IMAGE_NAME: crimea-transfer
-  FOLDER_ID: b1gvnuqsklois79c98aj
+  FOLDER_ID: b1gqnhfcloetu611d8fd
 
 jobs:
   build-and-push:
@@ -21,9 +21,13 @@ jobs:
           curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
           echo "$HOME/yandex-cloud/bin" >> $GITHUB_PATH
 
+      - name: Write key file
+        run: printenv YC_SA_JSON_KEY > /tmp/key.json
+        env:
+          YC_SA_JSON_KEY: ${{ secrets.YC_SA_JSON_KEY }}
+
       - name: Authenticate with Yandex Cloud
         run: |
-          echo '${{ secrets.YC_SA_JSON_KEY }}' > /tmp/key.json
           yc config profile create github-action
           yc auth activate --json-key /tmp/key.json
           rm /tmp/key.json
@@ -47,9 +51,13 @@ jobs:
           curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
           echo "$HOME/yandex-cloud/bin" >> $GITHUB_PATH
 
+      - name: Write key file
+        run: printenv YC_SA_JSON_KEY > /tmp/key.json
+        env:
+          YC_SA_JSON_KEY: ${{ secrets.YC_SA_JSON_KEY }}
+
       - name: Authenticate with Yandex Cloud
         run: |
-          echo '${{ secrets.YC_SA_JSON_KEY }}' > /tmp/key.json
           yc config profile create github-action
           yc auth activate --json-key /tmp/key.json
           rm /tmp/key.json
