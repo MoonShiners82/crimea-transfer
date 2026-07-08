@@ -213,6 +213,52 @@ export default function SignInPage() {
         )}
 
         {error && <p className="text-sm text-red-600 text-center">{error}</p>}
+
+        {/* TEMPORARY: Dev login button - remove before production */}
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <button
+            type="button"
+            onClick={async () => {
+              if (!phone) {
+                setError("Введите номер телефона")
+                return
+              }
+              setLoading(true)
+              setError("")
+              try {
+                const res = await fetch("/api/auth/dev-login", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ phone })
+                })
+                const data = await res.json()
+                if (!res.ok) {
+                  setError(data.error || "Ошибка")
+                  return
+                }
+                const signInResult = await signIn("credentials", {
+                  phone: data.phone,
+                  verificationToken: data.verificationToken,
+                  redirect: false,
+                })
+                if (signInResult?.error) {
+                  setError("Ошибка авторизации")
+                  return
+                }
+                router.push("/")
+                router.refresh()
+              } catch {
+                setError("Ошибка сервера")
+              } finally {
+                setLoading(false)
+              }
+            }}
+            disabled={loading}
+            className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50"
+          >
+            {loading ? "Вход..." : "Войти без SMS (тест)"}
+          </button>
+        </div>
       </div>
     </div>
   )
