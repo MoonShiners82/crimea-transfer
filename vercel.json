@@ -1,5 +1,7 @@
 {
+  "buildCommand": "npx next build",
   "framework": "nextjs",
+  "installCommand": "npm install",
   "env": {
     "DATABASE_URL": "@database-url",
     "NEXTAUTH_SECRET": "@nextauth-secret",
