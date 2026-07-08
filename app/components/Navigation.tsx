@@ -15,6 +15,12 @@ export default function Navigation() {
           </Link>
 
           <div className="flex items-center gap-4">
+            <Link
+              href="/terms"
+              className="text-gray-500 hover:text-gray-700 text-sm transition hidden sm:block"
+            >
+              Оферта
+            </Link>
             {session?.user ? (
               <>
                 <Link

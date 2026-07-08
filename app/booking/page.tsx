@@ -33,6 +33,9 @@ export default function BookingPage() {
   const [loading, setLoading] = useState(false)
   const [routesLoading, setRoutesLoading] = useState(true)
   const [error, setError] = useState("")
+  const [acceptTerms, setAcceptTerms] = useState(false)
+  const [acceptPersonalData, setAcceptPersonalData] = useState(false)
+  const [acceptMarketing, setAcceptMarketing] = useState(false)
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -239,9 +242,52 @@ export default function BookingPage() {
               </div>
             )}
 
+            <div className="space-y-3 pt-2">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={acceptTerms}
+                  onChange={(e) => setAcceptTerms(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  required
+                />
+                <span className="text-sm text-gray-600">
+                  Я принимаю условия{" "}
+                  <a href="/terms" target="_blank" className="text-blue-600 hover:underline">
+                    Пользовательского соглашения (оферты)
+                  </a>
+                </span>
+              </label>
+
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={acceptPersonalData}
+                  onChange={(e) => setAcceptPersonalData(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  required
+                />
+                <span className="text-sm text-gray-600">
+                  Я даю согласие на обработку персональных данных
+                </span>
+              </label>
+
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={acceptMarketing}
+                  onChange={(e) => setAcceptMarketing(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-600">
+                  Я согласен на получение рекламных материалов
+                </span>
+              </label>
+            </div>
+
             <button
               type="submit"
-              disabled={loading || !routeId || !datetime}
+              disabled={loading || !routeId || !datetime || !acceptTerms || !acceptPersonalData}
               className="w-full bg-blue-600 text-white p-4 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
             >
               {loading ? (
