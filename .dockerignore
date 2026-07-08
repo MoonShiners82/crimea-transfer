@@ -1,0 +1,11 @@
+node_modules
+.next
+.git
+.agents
+.claude
+.mimocode
+ngrok
+*.md
+.env
+.env.local
+.env*.local
