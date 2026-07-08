@@ -29,7 +29,7 @@ jobs:
       - name: Authenticate with Yandex Cloud
         run: |
           yc config profile create github-action
-          yc auth activate --json-key /tmp/key.json
+          yc config set service-account-key /tmp/key.json
           rm /tmp/key.json
           yc config set cloud-id b1gvnuqsklois79c98aj
           yc config set folder-id ${{ env.FOLDER_ID }}
@@ -59,7 +59,7 @@ jobs:
       - name: Authenticate with Yandex Cloud
         run: |
           yc config profile create github-action
-          yc auth activate --json-key /tmp/key.json
+          yc config set service-account-key /tmp/key.json
           rm /tmp/key.json
           yc config set cloud-id b1gvnuqsklois79c98aj
           yc config set folder-id ${{ env.FOLDER_ID }}
