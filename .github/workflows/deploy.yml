@@ -1,0 +1,59 @@
+name: Build and Deploy to Yandex Cloud
+
+on:
+  push:
+    branches: [main]
+
+env:
+  REGISTRY: cr.yandex.ru/bbahbe2vitdn4tlj9a5c
+  IMAGE_NAME: crimea-transfer
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to Yandex Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: cr.yandex.ru
+          username: ${{ secrets.YC_REGISTRY_LOGIN }}
+          password: ${{ secrets.YC_REGISTRY_PASSWORD }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to Yandex Cloud
+        uses: yc-actions/yc-coi-create-deploy-action@v1
+        with:
+          yc-sa-json-credentials: ${{ secrets.YC_SA_JSON_KEY }}
+          folder-id: b1gvnuqsklois79c98aj
+          container-name: crimea-transfer
+          container-spec: |
+            image:
+              image_url: cr.yandex.ru/bbahbe2vitdn4tlj9a5c/crimea-transfer:latest
+            resources:
+              memory: 512m
+              cores: 1
+            ports:
+              - port: 3000
+                name: http
+            environment:
+              - name: DATABASE_URL
+                value: "${{ secrets.DATABASE_URL }}"
+              - name: NEXTAUTH_SECRET
+                value: "${{ secrets.NEXTAUTH_SECRET }}"
+              - name: NEXTAUTH_URL
+                value: "https://crimea-transfer.${{ secrets.YC_FOLDER_ID }}.containers.yandexcloud.net"
+              - name: PLUSOFON_API_KEY
+                value: "${{ secrets.PLUSOFON_API_KEY }}"
