@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server"
-import { randomBytes } from "crypto"
-import { checkCallbackStatus } from "@/lib/plusofon"
 import { prisma } from "@/lib/prisma"
 
 function normalizePhone(phone: string): string {
@@ -12,52 +10,40 @@ function normalizePhone(phone: string): string {
 
 export async function POST(req: Request) {
   try {
-    const { phone, key } = await req.json()
+    const { phone } = await req.json()
 
-    if (!phone || !key) {
-      return NextResponse.json(
-        { error: "Телефон и ключ обязательны" },
-        { status: 400 }
-      )
+    if (!phone) {
+      return NextResponse.json({ error: "Phone required" }, { status: 400 })
     }
 
     const normalizedPhone = normalizePhone(phone)
 
-    const result = await checkCallbackStatus(key)
+    // Check if webhook created a verification token for this phone
+    const verificationToken = await prisma.verificationToken.findFirst({
+      where: {
+        phone: normalizedPhone,
+        isUsed: false,
+        expiresAt: { gt: new Date() }
+      },
+      orderBy: { createdAt: "desc" }
+    })
 
-    if (result.status !== "verified") {
-      const errorMessages: Record<string, string> = {
-        pending: "Звонок ещё не поступил. Позвоните на указанный номер.",
-        expired: "Время истекло. Запросите новый номер.",
-        failed: "Ошибка верификации. Попробуйте ещё раз.",
-      }
-      return NextResponse.json(
-        { error: errorMessages[result.status] || "Ошибка верификации" },
-        { status: 400 }
-      )
+    if (!verificationToken) {
+      return NextResponse.json({ error: "pending" })
     }
 
-    const token = randomBytes(32).toString("hex")
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000)
-
-    await prisma.verificationToken.create({
-      data: {
-        phone: normalizedPhone,
-        token,
-        expiresAt,
-        isUsed: false,
-      }
+    // Mark as used
+    await prisma.verificationToken.update({
+      where: { id: verificationToken.id },
+      data: { isUsed: true }
     })
 
     return NextResponse.json({
       success: true,
-      verificationToken: token,
+      verificationToken: verificationToken.token,
     })
   } catch (error) {
     console.error("Verify code error:", error)
-    return NextResponse.json(
-      { error: "Ошибка проверки" },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: "Server error" }, { status: 500 })
   }
 }
