@@ -12,18 +12,18 @@ function normalizePhone(phone: string): string {
 
 export async function POST(req: Request) {
   try {
-    const { phone, requestId } = await req.json()
+    const { phone, key } = await req.json()
 
-    if (!phone || !requestId) {
+    if (!phone || !key) {
       return NextResponse.json(
-        { error: "Телефон и requestId обязательны" },
+        { error: "Телефон и ключ обязательны" },
         { status: 400 }
       )
     }
 
     const normalizedPhone = normalizePhone(phone)
 
-    const result = await checkCallbackStatus(requestId)
+    const result = await checkCallbackStatus(key)
 
     if (result.status !== "verified") {
       const errorMessages: Record<string, string> = {

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { requestCallback } from "@/lib/plusofon"
+import { requestReverseFlashCall } from "@/lib/plusofon"
 
 function normalizePhone(phone: string): string {
   let clean = phone.replace(/\D/g, "")
@@ -17,16 +17,17 @@ export async function POST(req: Request) {
     }
 
     const normalizedPhone = normalizePhone(phone)
+    const webhookUrl = `${process.env.NEXTAUTH_URL || "https://crimea-tcr.vercel.app"}/api/auth/webhook`
 
-    const result = await requestCallback(normalizedPhone)
+    const result = await requestReverseFlashCall(normalizedPhone, webhookUrl)
 
-    console.log(`Callback requested for ${normalizedPhone}, request_id: ${result.request_id}`)
+    console.log(`Reverse Flash Call for ${normalizedPhone}, call to: ${result.phone}`)
 
     return NextResponse.json({
       success: true,
-      message: "Вам будет показан номер для звонка. Позвоните на него с вашего телефона для подтверждения.",
-      requestId: result.request_id,
+      message: "Позвоните на указанный номер для подтверждения",
       callTo: result.phone,
+      key: result.key,
     })
   } catch (error) {
     console.error("Send code error:", error)
