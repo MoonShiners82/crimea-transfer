@@ -18,37 +18,25 @@ type Booking = {
   carInfo: string | null
   createdAt: string
   cancelReason: string | null
-  user: {
-    phone: string
-    name: string | null
-  }
-  route: {
-    fromPoint: string
-    toPoint: string
-  }
+  user: { phone: string; name: string | null }
+  route: { fromPoint: string; toPoint: string }
 }
 
 type Stats = {
-  bookings: {
-    total: number
-    pending: number
-    confirmed: number
-    completed: number
-    cancelled: number
-    today: number
-    week: number
-    month: number
-  }
-  revenue: {
-    total: number
-    today: number
-    average: number
-  }
-  users: {
-    total: number
-  }
+  bookings: { total: number; pending: number; confirmed: number; completed: number; cancelled: number; today: number; week: number; month: number }
+  revenue: { total: number; today: number; average: number }
+  users: { total: number }
   popularRoutes: { fromPoint: string; toPoint: string; count: number }[]
   recentBookings: Booking[]
+}
+
+type Driver = {
+  id: string
+  name: string
+  phone: string
+  carInfo: string
+  isActive: boolean
+  createdAt: string
 }
 
 const statusOptions = [
@@ -59,512 +47,394 @@ const statusOptions = [
   { value: "cancelled", label: "Отменённые" },
 ]
 
+const statusColors: Record<string, string> = {
+  pending: "bg-yellow-100 text-yellow-800",
+  confirmed: "bg-green-100 text-green-800",
+  cancelled: "bg-red-100 text-red-800",
+  completed: "bg-blue-100 text-blue-800",
+}
+
+const statusText: Record<string, string> = {
+  pending: "Ожидает",
+  confirmed: "Подтверждена",
+  cancelled: "Отменена",
+  completed: "Завершена",
+}
+
 export default function AdminPage() {
-  const { data: session, status } = useSession()
+  const { data: session, status: authStatus } = useSession()
   const router = useRouter()
+  const [tab, setTab] = useState<"bookings" | "drivers">("bookings")
   const [bookings, setBookings] = useState<Booking[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
+  const [drivers, setDrivers] = useState<Driver[]>([])
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [showDashboard, setShowDashboard] = useState(true)
+
+  // Confirm modal
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [driverName, setDriverName] = useState("")
   const [driverPhone, setDriverPhone] = useState("")
   const [carInfo, setCarInfo] = useState("")
   const [priceFinal, setPriceFinal] = useState("")
   const [confirming, setConfirming] = useState(false)
+
+  // Edit modal
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null)
+  const [editPrice, setEditPrice] = useState("")
+  const [editDriver, setEditDriver] = useState("")
+  const [editDriverPhone, setEditDriverPhone] = useState("")
+  const [editCarInfo, setEditCarInfo] = useState("")
+  const [editing, setEditing] = useState(false)
+
+  // Driver modal
+  const [showDriverModal, setShowDriverModal] = useState(false)
+  const [newDriverName, setNewDriverName] = useState("")
+  const [newDriverPhone, setNewDriverPhone] = useState("")
+  const [newDriverCar, setNewDriverCar] = useState("")
+  const [addingDriver, setAddingDriver] = useState(false)
+
+  // Loading states
   const [cancellingId, setCancellingId] = useState<string | null>(null)
   const [completingId, setCompletingId] = useState<string | null>(null)
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/auth/signin")
-    }
-  }, [status, router])
+    if (authStatus === "unauthenticated") router.push("/auth/signin")
+  }, [authStatus, router])
 
   useEffect(() => {
-    if (status === "authenticated") {
+    if (authStatus === "authenticated") {
       fetchBookings()
       fetchStats()
+      fetchDrivers()
     }
-  }, [status, filterStatus, searchQuery])
+  }, [authStatus, filterStatus, searchQuery])
 
   const fetchBookings = async () => {
     try {
       const params = new URLSearchParams()
       if (filterStatus) params.set("status", filterStatus)
       if (searchQuery) params.set("search", searchQuery)
-      const url = `/api/admin/bookings${params.toString() ? `?${params.toString()}` : ""}`
-      const res = await fetch(url)
-      if (res.status === 403) {
-        alert("Доступ запрещён. Вы не администратор.")
-        router.push("/")
-        return
-      }
-      const data = await res.json()
-      setBookings(data)
-    } catch (err) {
-      console.error("Fetch bookings error:", err)
-    } finally {
-      setLoading(false)
-    }
+      const res = await fetch(`/api/admin/bookings${params.toString() ? `?${params.toString()}` : ""}`)
+      if (res.status === 403) { router.push("/"); return }
+      setBookings(await res.json())
+    } catch (e) { console.error(e) }
+    finally { setLoading(false) }
   }
 
   const fetchStats = async () => {
     try {
       const res = await fetch("/api/admin/stats")
-      if (res.ok) {
-        const data = await res.json()
-        setStats(data)
-      }
-    } catch (err) {
-      console.error("Fetch stats error:", err)
-    }
+      if (res.ok) setStats(await res.json())
+    } catch (e) { console.error(e) }
+  }
+
+  const fetchDrivers = async () => {
+    try {
+      const res = await fetch("/api/admin/drivers")
+      if (res.ok) setDrivers(await res.json())
+    } catch (e) { console.error(e) }
   }
 
   const handleConfirm = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedBooking) return
-
     setConfirming(true)
-
     try {
       const res = await fetch("/api/admin/bookings/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          bookingId: selectedBooking.id,
-          driverName,
-          driverPhone,
-          carInfo,
-          priceFinal: parseInt(priceFinal)
-        })
+        body: JSON.stringify({ bookingId: selectedBooking.id, driverName, driverPhone, carInfo, priceFinal: parseInt(priceFinal) })
       })
-
-      if (res.ok) {
-        alert("Заявка подтверждена!")
-        setSelectedBooking(null)
-        setDriverName("")
-        setDriverPhone("")
-        setCarInfo("")
-        setPriceFinal("")
-        fetchBookings()
-      } else {
-        alert("Ошибка подтверждения")
-      }
-    } catch (err) {
-      alert("Ошибка сервера")
-    } finally {
-      setConfirming(false)
-    }
+      if (res.ok) { setSelectedBooking(null); fetchBookings(); fetchStats() }
+      else alert("Ошибка подтверждения")
+    } catch { alert("Ошибка сервера") }
+    finally { setConfirming(false) }
   }
 
-  const handleCancel = async (bookingId: string) => {
-    if (!confirm("Отменить заявку?")) return
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingBooking) return
+    setEditing(true)
+    try {
+      const res = await fetch("/api/admin/bookings/edit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId: editingBooking.id, priceFinal: parseInt(editPrice), driverName: editDriver, driverPhone: editDriverPhone, carInfo: editCarInfo })
+      })
+      if (res.ok) { setEditingBooking(null); fetchBookings() }
+      else alert("Ошибка сохранения")
+    } catch { alert("Ошибка сервера") }
+    finally { setEditing(false) }
+  }
 
-    setCancellingId(bookingId)
+  const handleStatus = async (bookingId: string, newStatus: string) => {
+    if (!confirm(`Изменить статус на "${statusText[newStatus]}"?`)) return
     try {
       const res = await fetch("/api/admin/bookings/status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId, status: "cancelled" })
+        body: JSON.stringify({ bookingId, status: newStatus })
       })
-      if (res.ok) {
-        fetchBookings()
-        fetchStats()
-      } else {
-        alert("Ошибка отмены")
-      }
-    } catch {
-      alert("Ошибка сервера")
-    } finally {
-      setCancellingId(null)
-    }
+      if (res.ok) { fetchBookings(); fetchStats() }
+      else alert("Ошибка")
+    } catch { alert("Ошибка сервера") }
   }
 
-  const handleComplete = async (bookingId: string) => {
-    if (!confirm("Завершить заявку?")) return
-
-    setCompletingId(bookingId)
+  const handleAddDriver = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setAddingDriver(true)
     try {
-      const res = await fetch("/api/admin/bookings/status", {
+      const res = await fetch("/api/admin/drivers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId, status: "completed" })
+        body: JSON.stringify({ name: newDriverName, phone: newDriverPhone, carInfo: newDriverCar })
       })
-      if (res.ok) {
-        fetchBookings()
-        fetchStats()
-      } else {
-        alert("Ошибка завершения")
-      }
-    } catch {
-      alert("Ошибка сервера")
-    } finally {
-      setCompletingId(null)
-    }
+      if (res.ok) { setShowDriverModal(false); setNewDriverName(""); setNewDriverPhone(""); setNewDriverCar(""); fetchDrivers() }
+      else alert("Ошибка добавления")
+    } catch { alert("Ошибка сервера") }
+    finally { setAddingDriver(false) }
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "pending": return "bg-yellow-100 text-yellow-800"
-      case "confirmed": return "bg-green-100 text-green-800"
-      case "cancelled": return "bg-red-100 text-red-800"
-      case "completed": return "bg-blue-100 text-blue-800"
-      default: return "bg-gray-100 text-gray-800"
-    }
+  const handleDeleteDriver = async (id: string) => {
+    if (!confirm("Удалить водителя?")) return
+    try {
+      const res = await fetch(`/api/admin/drivers?id=${id}`, { method: "DELETE" })
+      if (res.ok) fetchDrivers()
+    } catch { alert("Ошибка") }
   }
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "pending": return "Ожидает"
-      case "confirmed": return "Подтверждена"
-      case "cancelled": return "Отменена"
-      case "completed": return "Завершена"
-      default: return status
-    }
+  const handleExport = async (format: "csv" | "json") => {
+    const params = new URLSearchParams()
+    if (filterStatus) params.set("status", filterStatus)
+    if (searchQuery) params.set("search", searchQuery)
+    params.set("format", format)
+    window.open(`/api/admin/export?${params.toString()}`, "_blank")
   }
 
-  if (status === "loading" || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    )
+  if (authStatus === "loading" || loading) {
+    return <div className="min-h-screen flex items-center justify-center bg-[#F5F0EB]"><div className="animate-spin rounded-full h-8 w-8 border-2 border-[#2D6A8F] border-t-transparent"></div></div>
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-[#F5F0EB] py-8">
       <div className="max-w-7xl mx-auto px-4">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Админ-панель</h1>
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <h1 className="text-3xl font-bold text-[#1A2332]" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>Админ-панель</h1>
           <div className="flex gap-2">
-            <button
-              onClick={() => setShowDashboard(!showDashboard)}
-              className={`px-4 py-2 rounded transition ${showDashboard ? "bg-blue-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
-            >
+            <button onClick={() => setShowDashboard(!showDashboard)} className={`px-4 py-2 rounded-lg text-sm font-medium transition ${showDashboard ? "bg-[#2D6A8F] text-white" : "bg-white text-[#1A2332] hover:bg-gray-100 border border-[#B8D4E3]"}`}>
               {showDashboard ? "Скрыть статистику" : "Показать статистику"}
             </button>
-            <Link
-              href="/admin/background-check"
-              className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition"
-            >
-              Проверка данных
-            </Link>
-            <Link
-              href="/"
-              className="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300 transition"
-            >
-              На главную
-            </Link>
+            <Link href="/" className="bg-white text-[#1A2332] px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-100 border border-[#B8D4E3] transition">На главную</Link>
           </div>
         </div>
 
+        {/* Dashboard */}
         {showDashboard && stats && (
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4">Статистика</h2>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <div className="bg-white rounded-lg shadow p-4">
-                <div className="text-sm text-gray-500">Всего заявок</div>
-                <div className="text-2xl font-bold">{stats.bookings.total}</div>
-              </div>
-              <div className="bg-white rounded-lg shadow p-4">
-                <div className="text-sm text-gray-500">Ожидают</div>
-                <div className="text-2xl font-bold text-yellow-600">{stats.bookings.pending}</div>
-              </div>
-              <div className="bg-white rounded-lg shadow p-4">
-                <div className="text-sm text-gray-500">Подтверждены</div>
-                <div className="text-2xl font-bold text-green-600">{stats.bookings.confirmed}</div>
-              </div>
-              <div className="bg-white rounded-lg shadow p-4">
-                <div className="text-sm text-gray-500">Завершены</div>
-                <div className="text-2xl font-bold text-blue-600">{stats.bookings.completed}</div>
-              </div>
+          <div className="mb-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-white rounded-lg p-4 border border-[#B8D4E3]">
+              <div className="text-sm text-[#8B7355]">Всего заявок</div>
+              <div className="text-2xl font-bold text-[#1A2332]">{stats.bookings.total}</div>
             </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <div className="bg-white rounded-lg shadow p-4">
-                <div className="text-sm text-gray-500">Отменены</div>
-                <div className="text-2xl font-bold text-red-600">{stats.bookings.cancelled}</div>
-              </div>
-              <div className="bg-white rounded-lg shadow p-4">
-                <div className="text-sm text-gray-500">Выручка</div>
-                <div className="text-2xl font-bold">{stats.revenue.total.toLocaleString("ru")} ₽</div>
-              </div>
-              <div className="bg-white rounded-lg shadow p-4">
-                <div className="text-sm text-gray-500">Средний чек</div>
-                <div className="text-2xl font-bold">{stats.revenue.average.toLocaleString("ru")} ₽</div>
-              </div>
-              <div className="bg-white rounded-lg shadow p-4">
-                <div className="text-sm text-gray-500">Пользователей</div>
-                <div className="text-2xl font-bold">{stats.users.total}</div>
-              </div>
+            <div className="bg-white rounded-lg p-4 border border-[#B8D4E3]">
+              <div className="text-sm text-[#8B7355]">Ожидают</div>
+              <div className="text-2xl font-bold text-yellow-600">{stats.bookings.pending}</div>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="bg-white rounded-lg shadow p-4">
-                <div className="text-sm text-gray-500">Сегодня</div>
-                <div className="text-lg font-semibold">{stats.bookings.today} заявок · {stats.revenue.today.toLocaleString("ru")} ₽</div>
-              </div>
-              <div className="bg-white rounded-lg shadow p-4">
-                <div className="text-sm text-gray-500">На этой неделе</div>
-                <div className="text-lg font-semibold">{stats.bookings.week} заявок</div>
-              </div>
-              <div className="bg-white rounded-lg shadow p-4">
-                <div className="text-sm text-gray-500">В этом месяце</div>
-                <div className="text-lg font-semibold">{stats.bookings.month} заявок</div>
-              </div>
+            <div className="bg-white rounded-lg p-4 border border-[#B8D4E3]">
+              <div className="text-sm text-[#8B7355]">Выручка</div>
+              <div className="text-2xl font-bold text-[#2D6A8F]">{stats.revenue.total.toLocaleString("ru")} ₽</div>
             </div>
-
-            {stats.popularRoutes.length > 0 && (
-              <div className="bg-white rounded-lg shadow p-4 mb-6">
-                <h3 className="font-semibold mb-3">Популярные маршруты</h3>
-                <div className="space-y-2">
-                  {stats.popularRoutes.map((route, i) => (
-                    <div key={i} className="flex justify-between items-center">
-                      <span>{route.fromPoint} → {route.toPoint}</span>
-                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">{route.count} заявок</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {stats.recentBookings.length > 0 && (
-              <div className="bg-white rounded-lg shadow p-4">
-                <h3 className="font-semibold mb-3">Последние заявки</h3>
-                <div className="space-y-2">
-                  {stats.recentBookings.map((b) => (
-                    <div key={b.id} className="flex justify-between items-center text-sm">
-                      <span>{b.user.phone} — {b.route.fromPoint} → {b.route.toPoint}</span>
-                      <span className={`px-2 py-1 rounded ${getStatusColor(b.status)}`}>{getStatusText(b.status)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <div className="bg-white rounded-lg p-4 border border-[#B8D4E3]">
+              <div className="text-sm text-[#8B7355]">Пользователей</div>
+              <div className="text-2xl font-bold text-[#1A2332]">{stats.users.total}</div>
+            </div>
           </div>
         )}
 
+        {/* Tabs */}
         <div className="flex gap-2 mb-6">
-          {statusOptions.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => setFilterStatus(opt.value)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                filterStatus === opt.value
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-100 border"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-          <div className="ml-auto flex items-center gap-2">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Поиск по телефону, имени, маршруту..."
-              className="px-4 py-2 border rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <span className="text-sm text-gray-500">
-              Заявок: {bookings.length}
-            </span>
+          <button onClick={() => setTab("bookings")} className={`px-4 py-2 rounded-lg text-sm font-medium transition ${tab === "bookings" ? "bg-[#1A2332] text-white" : "bg-white text-[#1A2332] hover:bg-gray-100 border border-[#B8D4E3]"}`}>Заявки</button>
+          <button onClick={() => setTab("drivers")} className={`px-4 py-2 rounded-lg text-sm font-medium transition ${tab === "drivers" ? "bg-[#1A2332] text-white" : "bg-white text-[#1A2332] hover:bg-gray-100 border border-[#B8D4E3]"}`}>Водители</button>
+          <div className="ml-auto flex gap-2">
+            <button onClick={() => handleExport("csv")} className="bg-white text-[#1A2332] px-3 py-2 rounded-lg text-sm hover:bg-gray-100 border border-[#B8D4E3] transition">📥 CSV</button>
+            <button onClick={() => handleExport("json")} className="bg-white text-[#1A2332] px-3 py-2 rounded-lg text-sm hover:bg-gray-100 border border-[#B8D4E3] transition">📥 JSON</button>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold">ID</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Дата поездки</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Маршрут</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Клиент</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Водитель</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Пассажиры</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Багаж</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Цена</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Статус</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Действия</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {bookings.map((booking) => (
-                <tr key={booking.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm font-mono">
-                    {booking.id.slice(-6)}
-                  </td>
-                  <td className="px-4 py-3 text-sm">
-                    {new Date(booking.datetime).toLocaleString("ru")}
-                  </td>
-                  <td className="px-4 py-3 text-sm">
-                    {booking.route.fromPoint} → {booking.route.toPoint}
-                  </td>
-                  <td className="px-4 py-3 text-sm">
-                    {booking.user.name && (
-                      <div className="font-medium">{booking.user.name}</div>
-                    )}
-                    <div className="text-gray-500">{booking.user.phone}</div>
-                  </td>
-                  <td className="px-4 py-3 text-sm">
-                    {booking.driverName ? (
-                      <div>
-                        <div className="font-medium">{booking.driverName}</div>
-                        {booking.driverPhone && (
-                          <div className="text-gray-500 text-xs">{booking.driverPhone}</div>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-gray-400">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-sm">
-                    {booking.passengers} чел.
-                  </td>
-                  <td className="px-4 py-3 text-sm">
-                    {booking.baggageType === "none" ? "—" : booking.baggageType}
-                  </td>
-                  <td className="px-4 py-3 text-sm">
-                    {booking.priceFinal || booking.priceCalculated} ₽
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(booking.status)}`}>
-                      {getStatusText(booking.status)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-1">
-                      {booking.status === "pending" && (
-                        <button
-                          onClick={() => {
-                            setSelectedBooking(booking)
-                            setPriceFinal(booking.priceCalculated.toString())
-                          }}
-                          className="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700"
-                        >
-                          Подтвердить
-                        </button>
-                      )}
-                      {booking.status === "confirmed" && (
-                        <button
-                          onClick={() => handleComplete(booking.id)}
-                          disabled={completingId === booking.id}
-                          className="bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 disabled:bg-gray-400"
-                        >
-                          {completingId === booking.id ? "..." : "Завершить"}
-                        </button>
-                      )}
-                      {(booking.status === "pending" || booking.status === "confirmed") && (
-                        <button
-                          onClick={() => handleCancel(booking.id)}
-                          disabled={cancellingId === booking.id}
-                          className="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600 disabled:bg-gray-400"
-                        >
-                          {cancellingId === booking.id ? "..." : "Отмена"}
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
+        {/* Bookings Tab */}
+        {tab === "bookings" && (
+          <>
+            <div className="flex flex-wrap gap-2 mb-6">
+              {statusOptions.map((opt) => (
+                <button key={opt.value} onClick={() => setFilterStatus(opt.value)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${filterStatus === opt.value ? "bg-[#E8A838] text-[#1A2332]" : "bg-white text-[#1A2332] hover:bg-gray-100 border border-[#B8D4E3]"}`}>
+                  {opt.label}
+                </button>
               ))}
-            </tbody>
-          </table>
-
-          {bookings.length === 0 && (
-            <div className="text-center py-12 text-gray-500">
-              Заявок пока нет
+              <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Поиск по телефону, имени, маршруту..." className="ml-auto px-4 py-2 border border-[#B8D4E3] rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-[#2D6A8F] bg-white" />
             </div>
-          )}
-        </div>
+
+            <div className="bg-white rounded-lg border border-[#B8D4E3] overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-[#F5F0EB]">
+                    <tr>
+                      {["ID", "Дата", "Маршрут", "Клиент", "Водитель", "Пассажиры", "Цена", "Статус", "Действия"].map(h => (
+                        <th key={h} className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#B8D4E3]">
+                    {bookings.map((b) => (
+                      <tr key={b.id} className="hover:bg-[#F5F0EB]/50">
+                        <td className="px-4 py-3 text-sm font-mono text-[#8B7355]">{b.id.slice(-6)}</td>
+                        <td className="px-4 py-3 text-sm">{new Date(b.datetime).toLocaleString("ru")}</td>
+                        <td className="px-4 py-3 text-sm font-medium">{b.route.fromPoint} → {b.route.toPoint}</td>
+                        <td className="px-4 py-3 text-sm">
+                          {b.user.name && <div className="font-medium">{b.user.name}</div>}
+                          <div className="text-[#8B7355]">{b.user.phone}</div>
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          {b.driverName ? <div><div className="font-medium">{b.driverName}</div>{b.driverPhone && <div className="text-[#8B7355] text-xs">{b.driverPhone}</div>}</div> : <span className="text-[#B8D4E3]">—</span>}
+                        </td>
+                        <td className="px-4 py-3 text-sm">{b.passengers} чел.</td>
+                        <td className="px-4 py-3 text-sm font-medium">{b.priceFinal || b.priceCalculated} ₽</td>
+                        <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[b.status]}`}>{statusText[b.status]}</span></td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-1 flex-wrap">
+                            {b.status === "pending" && (
+                              <button onClick={() => { setSelectedBooking(b); setPriceFinal(b.priceCalculated.toString()) }}
+                                className="bg-[#E8A838] text-[#1A2332] px-2 py-1 rounded text-xs font-medium hover:bg-[#d49a30]">Подтвердить</button>
+                            )}
+                            {b.status === "confirmed" && (
+                              <button onClick={() => handleStatus(b.id, "completed")} disabled={completingId === b.id}
+                                className="bg-[#2D6A8F] text-white px-2 py-1 rounded text-xs font-medium hover:bg-[#245a7a] disabled:opacity-50">
+                                {completingId === b.id ? "..." : "Завершить"}
+                              </button>
+                            )}
+                            {(b.status === "pending" || b.status === "confirmed") && (
+                              <button onClick={() => handleStatus(b.id, "cancelled")} disabled={cancellingId === b.id}
+                                className="bg-red-500 text-white px-2 py-1 rounded text-xs font-medium hover:bg-red-600 disabled:opacity-50">
+                                {cancellingId === b.id ? "..." : "Отмена"}
+                              </button>
+                            )}
+                            {b.status !== "cancelled" && (
+                              <button onClick={() => { setEditingBooking(b); setEditPrice((b.priceFinal || b.priceCalculated).toString()); setEditDriver(b.driverName || ""); setEditDriverPhone(b.driverPhone || ""); setEditCarInfo(b.carInfo || "") }}
+                                className="bg-gray-200 text-[#1A2332] px-2 py-1 rounded text-xs font-medium hover:bg-gray-300">✏️</button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {bookings.length === 0 && <div className="text-center py-12 text-[#8B7355]">Заявок пока нет</div>}
+            </div>
+          </>
+        )}
+
+        {/* Drivers Tab */}
+        {tab === "drivers" && (
+          <>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-[#1A2332]" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>Водители</h2>
+              <button onClick={() => setShowDriverModal(true)} className="bg-[#E8A838] text-[#1A2332] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#d49a30] transition">+ Добавить водителя</button>
+            </div>
+            <div className="bg-white rounded-lg border border-[#B8D4E3] overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-[#F5F0EB]">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Имя</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Телефон</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Автомобиль</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Статус</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Действия</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#B8D4E3]">
+                  {drivers.map((d) => (
+                    <tr key={d.id} className="hover:bg-[#F5F0EB]/50">
+                      <td className="px-4 py-3 text-sm font-medium">{d.name}</td>
+                      <td className="px-4 py-3 text-sm">{d.phone}</td>
+                      <td className="px-4 py-3 text-sm">{d.carInfo}</td>
+                      <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${d.isActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>{d.isActive ? "Активен" : "Неактивен"}</span></td>
+                      <td className="px-4 py-3">
+                        <button onClick={() => handleDeleteDriver(d.id)} className="text-red-500 hover:text-red-700 text-sm">Удалить</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {drivers.length === 0 && <div className="text-center py-12 text-[#8B7355]">Водителей пока нет. Добавьте первого!</div>}
+            </div>
+          </>
+        )}
       </div>
 
+      {/* Confirm Modal */}
       {selectedBooking && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h2 className="text-xl font-bold mb-4">
-              Подтверждение заявки #{selectedBooking.id.slice(-6)}
-            </h2>
-
-            <div className="bg-gray-50 p-3 rounded mb-4 text-sm">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setSelectedBooking(null)}>
+          <div className="bg-white rounded-lg max-w-md w-full p-6 border border-[#B8D4E3]" onClick={e => e.stopPropagation()}>
+            <h2 className="text-xl font-bold mb-4 text-[#1A2332]" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>Подтверждение заявки #{selectedBooking.id.slice(-6)}</h2>
+            <div className="bg-[#F5F0EB] p-3 rounded-lg mb-4 text-sm space-y-1">
               <p><strong>Маршрут:</strong> {selectedBooking.route.fromPoint} → {selectedBooking.route.toPoint}</p>
               <p><strong>Дата:</strong> {new Date(selectedBooking.datetime).toLocaleString("ru")}</p>
               <p><strong>Клиент:</strong> {selectedBooking.user.name && `${selectedBooking.user.name} — `}{selectedBooking.user.phone}</p>
               <p><strong>Пассажиры:</strong> {selectedBooking.passengers}</p>
-              <p><strong>Багаж:</strong> {selectedBooking.baggageType === "none" ? "Нет" : selectedBooking.baggageType}</p>
             </div>
-
             <form onSubmit={handleConfirm} className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium mb-1">Имя водителя</label>
-                <input
-                  type="text"
-                  value={driverName}
-                  onChange={(e) => setDriverName(e.target.value)}
-                  className="w-full p-2 border rounded"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Телефон водителя</label>
-                <input
-                  type="tel"
-                  value={driverPhone}
-                  onChange={(e) => setDriverPhone(e.target.value)}
-                  placeholder="+79991234567"
-                  className="w-full p-2 border rounded"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Автомобиль</label>
-                <input
-                  type="text"
-                  value={carInfo}
-                  onChange={(e) => setCarInfo(e.target.value)}
-                  placeholder="Hyundai Solaris, А123АА77"
-                  className="w-full p-2 border rounded"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Итоговая цена (руб)</label>
-                <input
-                  type="number"
-                  value={priceFinal}
-                  onChange={(e) => setPriceFinal(e.target.value)}
-                  className="w-full p-2 border rounded"
-                  required
-                />
-              </div>
-
+              <input type="text" placeholder="Имя водителя" value={driverName} onChange={e => setDriverName(e.target.value)} className="w-full p-2 border border-[#B8D4E3] rounded-lg" required />
+              <input type="tel" placeholder="Телефон водителя" value={driverPhone} onChange={e => setDriverPhone(e.target.value)} className="w-full p-2 border border-[#B8D4E3] rounded-lg" required />
+              <input type="text" placeholder="Автомобиль" value={carInfo} onChange={e => setCarInfo(e.target.value)} className="w-full p-2 border border-[#B8D4E3] rounded-lg" required />
+              <input type="number" placeholder="Итоговая цена (руб)" value={priceFinal} onChange={e => setPriceFinal(e.target.value)} className="w-full p-2 border border-[#B8D4E3] rounded-lg" required />
               <div className="flex gap-2 pt-2">
-                <button
-                  type="submit"
-                  disabled={confirming}
-                  className="flex-1 bg-green-600 text-white p-2 rounded font-semibold hover:bg-green-700 disabled:bg-gray-400"
-                >
-                  {confirming ? "Отправка..." : "Подтвердить"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedBooking(null)
-                    setDriverName("")
-                    setDriverPhone("")
-                    setCarInfo("")
-                    setPriceFinal("")
-                  }}
-                  className="flex-1 bg-gray-200 text-gray-800 p-2 rounded font-semibold hover:bg-gray-300"
-                >
-                  Отмена
-                </button>
+                <button type="submit" disabled={confirming} className="flex-1 bg-[#E8A838] text-[#1A2332] p-2 rounded-lg font-semibold hover:bg-[#d49a30] disabled:opacity-50">{confirming ? "Отправка..." : "Подтвердить"}</button>
+                <button type="button" onClick={() => setSelectedBooking(null)} className="flex-1 bg-gray-200 p-2 rounded-lg font-semibold hover:bg-gray-300">Отмена</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {editingBooking && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setEditingBooking(null)}>
+          <div className="bg-white rounded-lg max-w-md w-full p-6 border border-[#B8D4E3]" onClick={e => e.stopPropagation()}>
+            <h2 className="text-xl font-bold mb-4 text-[#1A2332]" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>Редактирование #{editingBooking.id.slice(-6)}</h2>
+            <div className="bg-[#F5F0EB] p-3 rounded-lg mb-4 text-sm">
+              <p><strong>Маршрут:</strong> {editingBooking.route.fromPoint} → {editingBooking.route.toPoint}</p>
+            </div>
+            <form onSubmit={handleEdit} className="space-y-3">
+              <input type="text" placeholder="Имя водителя" value={editDriver} onChange={e => setEditDriver(e.target.value)} className="w-full p-2 border border-[#B8D4E3] rounded-lg" />
+              <input type="tel" placeholder="Телефон водителя" value={editDriverPhone} onChange={e => setEditDriverPhone(e.target.value)} className="w-full p-2 border border-[#B8D4E3] rounded-lg" />
+              <input type="text" placeholder="Автомобиль" value={editCarInfo} onChange={e => setEditCarInfo(e.target.value)} className="w-full p-2 border border-[#B8D4E3] rounded-lg" />
+              <input type="number" placeholder="Цена (руб)" value={editPrice} onChange={e => setEditPrice(e.target.value)} className="w-full p-2 border border-[#B8D4E3] rounded-lg" required />
+              <div className="flex gap-2 pt-2">
+                <button type="submit" disabled={editing} className="flex-1 bg-[#2D6A8F] text-white p-2 rounded-lg font-semibold hover:bg-[#245a7a] disabled:opacity-50">{editing ? "Сохранение..." : "Сохранить"}</button>
+                <button type="button" onClick={() => setEditingBooking(null)} className="flex-1 bg-gray-200 p-2 rounded-lg font-semibold hover:bg-gray-300">Отмена</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Driver Modal */}
+      {showDriverModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setShowDriverModal(false)}>
+          <div className="bg-white rounded-lg max-w-md w-full p-6 border border-[#B8D4E3]" onClick={e => e.stopPropagation()}>
+            <h2 className="text-xl font-bold mb-4 text-[#1A2332]" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>Новый водитель</h2>
+            <form onSubmit={handleAddDriver} className="space-y-3">
+              <input type="text" placeholder="ФИО" value={newDriverName} onChange={e => setNewDriverName(e.target.value)} className="w-full p-2 border border-[#B8D4E3] rounded-lg" required />
+              <input type="tel" placeholder="Телефон" value={newDriverPhone} onChange={e => setNewDriverPhone(e.target.value)} className="w-full p-2 border border-[#B8D4E3] rounded-lg" required />
+              <input type="text" placeholder="Автомобиль" value={newDriverCar} onChange={e => setNewDriverCar(e.target.value)} className="w-full p-2 border border-[#B8D4E3] rounded-lg" required />
+              <div className="flex gap-2 pt-2">
+                <button type="submit" disabled={addingDriver} className="flex-1 bg-[#E8A838] text-[#1A2332] p-2 rounded-lg font-semibold hover:bg-[#d49a30] disabled:opacity-50">{addingDriver ? "Добавление..." : "Добавить"}</button>
+                <button type="button" onClick={() => setShowDriverModal(false)} className="flex-1 bg-gray-200 p-2 rounded-lg font-semibold hover:bg-gray-300">Отмена</button>
               </div>
             </form>
           </div>

@@ -70,6 +70,15 @@ model VerificationToken {
   createdAt DateTime  @default(now())
 }
 
+model Driver {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String
+  carInfo   String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
 model BackgroundCheck {
   id              String    @id @default(cuid())
   fullName        String

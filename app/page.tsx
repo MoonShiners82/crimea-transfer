@@ -15,7 +15,7 @@ export default function Home() {
             Трансфер по Крыму
           </h1>
           <p className="text-lg md:text-xl text-white/80 mb-8 max-w-xl mx-auto">
-            Комфортные поездки из аэропорта Симферополя в любой точке полуострова
+            Комфортные поездки в любую точку полуострова
           </p>
           <Link
             href={session?.user ? "/booking" : "/auth/signin"}
