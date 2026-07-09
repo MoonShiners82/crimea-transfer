@@ -16,12 +16,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Phone required" }, { status: 400 })
     }
 
-    const normalizedPhone = normalizePhone(phone)
+    let normalizedPhone = normalizePhone(phone)
+    // Also try without + prefix for compatibility
+    const phoneWithoutPlus = normalizedPhone.startsWith("+") ? normalizedPhone.slice(1) : normalizedPhone
+    const phoneWithPlus = normalizedPhone.startsWith("+") ? normalizedPhone : "+" + normalizedPhone
 
     // Check if webhook created a verification token for this phone
     const verificationToken = await prisma.verificationToken.findFirst({
       where: {
-        phone: normalizedPhone,
+        phone: { in: [normalizedPhone, phoneWithPlus, phoneWithoutPlus] },
         isUsed: false,
         expiresAt: { gt: new Date() }
       },
