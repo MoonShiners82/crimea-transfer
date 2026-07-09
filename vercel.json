@@ -1,11 +1,5 @@
 {
   "buildCommand": "npx next build",
   "framework": "nextjs",
-  "installCommand": "npm install",
-  "env": {
-    "DATABASE_URL": "@database-url",
-    "NEXTAUTH_SECRET": "@nextauth-secret",
-    "NEXTAUTH_URL": "https://togocrimea.ru",
-    "PLUSOFON_API_KEY": "@plusofon-api-key"
-  }
+  "installCommand": "npm install"
 }
