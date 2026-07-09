@@ -7,17 +7,17 @@ export default function Navigation() {
   const { data: session } = useSession()
 
   return (
-    <nav className="bg-white shadow-sm border-b">
+    <nav className="bg-[#1A2332] text-white">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
-          <Link href="/" className="text-xl font-bold text-blue-600">
-            Трансфер по Крыму
+          <Link href="/" className="text-xl font-bold" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
+            <span className="text-[#E8A838]">Крым</span>Трансфер
           </Link>
 
           <div className="flex items-center gap-4">
             <Link
               href="/terms"
-              className="text-gray-500 hover:text-gray-700 text-sm transition hidden sm:block"
+              className="text-white/60 hover:text-white text-sm transition hidden sm:block"
             >
               Оферта
             </Link>
@@ -25,31 +25,31 @@ export default function Navigation() {
               <>
                 <Link
                   href="/booking"
-                  className="text-gray-700 hover:text-blue-600 transition"
+                  className="text-white/80 hover:text-white transition"
                 >
                   Забронировать
                 </Link>
                 <Link
                   href="/bookings"
-                  className="text-gray-700 hover:text-blue-600 transition"
+                  className="text-white/80 hover:text-white transition"
                 >
                   Мои бронирования
                 </Link>
                 {(session.user as any).role === "admin" && (
                   <Link
                     href="/admin"
-                    className="text-gray-700 hover:text-blue-600 transition"
+                    className="text-white/80 hover:text-white transition"
                   >
                     Админка
                   </Link>
                 )}
-                <div className="flex items-center gap-3 ml-4 pl-4 border-l">
-                  <span className="text-sm text-gray-500">
+                <div className="flex items-center gap-3 ml-4 pl-4 border-l border-white/20">
+                  <span className="text-sm text-white/60">
                     {(session.user as any).phone}
                   </span>
                   <button
                     onClick={() => signOut({ callbackUrl: "/" })}
-                    className="text-sm text-red-600 hover:text-red-800 transition"
+                    className="text-sm text-[#E8A838] hover:text-[#d49a30] transition"
                   >
                     Выйти
                   </button>
@@ -58,7 +58,7 @@ export default function Navigation() {
             ) : (
               <Link
                 href="/auth/signin"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition"
+                className="bg-[#E8A838] text-[#1A2332] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#d49a30] transition"
               >
                 Войти
               </Link>

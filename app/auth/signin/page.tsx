@@ -9,7 +9,7 @@ export default function SignInPage() {
   const [phone, setPhone] = useState("")
   const [step, setStep] = useState<"phone" | "call">("phone")
   const [callTo, setCallTo] = useState("")
-  const [requestId, setRequestId] = useState("")
+  const [authKey, setAuthKey] = useState("")
   const [message, setMessage] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
@@ -36,7 +36,7 @@ export default function SignInPage() {
       }
 
       setCallTo(data.callTo)
-      setRequestId(data.requestId)
+      setAuthKey(data.key)
       setStep("call")
       setMessage("Позвоните на указанный номер с вашего телефона")
     } catch {
@@ -47,7 +47,7 @@ export default function SignInPage() {
   }
 
   const handleVerify = useCallback(async () => {
-    if (!requestId) return
+    if (!authKey) return
     setChecking(true)
     setError("")
 
@@ -55,7 +55,7 @@ export default function SignInPage() {
       const res = await fetch("/api/auth/verify-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, requestId })
+        body: JSON.stringify({ phone, key: authKey })
       })
 
       const data = await res.json()
@@ -86,80 +86,78 @@ export default function SignInPage() {
     } finally {
       setChecking(false)
     }
-  }, [phone, requestId, router])
+  }, [phone, authKey, router])
 
   useEffect(() => {
-    if (step !== "call" || !requestId) return
+    if (step !== "call" || !authKey) return
 
     const interval = setInterval(handleVerify, 3000)
     return () => clearInterval(interval)
-  }, [step, requestId, handleVerify])
+  }, [step, authKey, handleVerify])
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+    <div className="min-h-screen bg-gradient-to-b from-[#1A2332] via-[#2D6A8F] to-[#B8D4E3] flex items-center justify-center py-12 px-4">
+      <div className="max-w-md w-full bg-[#F5F0EB] rounded-lg p-8 shadow-xl">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-[#1A2332] mb-2" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
             Вход в систему
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          </h1>
+          <p className="text-[#8B7355]">
             Подтверждение через звонок
           </p>
         </div>
 
         {step === "phone" ? (
-          <form className="mt-8 space-y-6" onSubmit={handleSendCode}>
+          <form onSubmit={handleSendCode} className="space-y-4">
             <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-[#1A2332] mb-1">
                 Номер телефона
               </label>
               <input
-                id="phone"
-                name="phone"
                 type="tel"
                 required
                 placeholder="+7 (___) ___-__-__"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 border border-[#B8D4E3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2D6A8F] bg-white"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              className="w-full bg-[#E8A838] text-[#1A2332] py-3 rounded-lg font-semibold hover:bg-[#d49a30] transition disabled:opacity-50"
             >
               {loading ? "Отправка..." : "Получить номер для звонка"}
             </button>
           </form>
         ) : (
-          <div className="mt-8 space-y-6">
+          <div className="space-y-4">
             <div className="text-center">
-              <p className="text-sm text-gray-600 mb-4">
-                Позвоните на этот номер с вашего телефона:
+              <p className="text-[#8B7355] mb-2">
+                Позвоните на этот номер:
               </p>
-              <p className="text-3xl font-bold text-blue-600 tracking-wider">
+              <p className="text-4xl font-bold text-[#1A2332] tracking-wider">
                 {callTo}
               </p>
-              <p className="text-sm text-gray-500 mt-2">
+              <p className="text-sm text-[#8B7355] mt-2">
                 Звонок бесплатный. Код подтверждения не требуется.
               </p>
             </div>
 
-            {message && <p className="text-sm text-green-600 text-center">{message}</p>}
+            {message && <p className="text-sm text-[#2D6A8F] text-center">{message}</p>}
 
             {checking && (
-              <div className="flex items-center justify-center space-x-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                <span className="text-sm text-gray-500">Ожидание звонка...</span>
+              <div className="flex items-center justify-center gap-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-[#2D6A8F] border-t-transparent"></div>
+                <span className="text-sm text-[#8B7355]">Ожидание звонка...</span>
               </div>
             )}
 
             <button
               onClick={handleVerify}
               disabled={checking}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+              className="w-full bg-[#2D6A8F] text-white py-3 rounded-lg font-semibold hover:bg-[#245a7a] transition disabled:opacity-50"
             >
               Я позвонил, проверить
             </button>
@@ -170,11 +168,11 @@ export default function SignInPage() {
                 onClick={() => {
                   setStep("phone")
                   setCallTo("")
-                  setRequestId("")
+                  setAuthKey("")
                   setError("")
                   setMessage("")
                 }}
-                className="text-sm text-gray-600 hover:text-gray-900"
+                className="text-sm text-[#8B7355] hover:text-[#1A2332]"
               >
                 Изменить номер
               </button>
@@ -195,7 +193,7 @@ export default function SignInPage() {
                       setError(data.error || "Ошибка")
                     } else {
                       setCallTo(data.callTo)
-                      setRequestId(data.requestId)
+                      setAuthKey(data.key)
                       setMessage("Новый номер получен")
                     }
                   } catch {
@@ -204,7 +202,7 @@ export default function SignInPage() {
                     setLoading(false)
                   }
                 }}
-                className="text-sm text-blue-600 hover:text-blue-800"
+                className="text-sm text-[#2D6A8F] hover:text-[#1A2332]"
               >
                 Получить новый номер
               </button>
@@ -212,53 +210,7 @@ export default function SignInPage() {
           </div>
         )}
 
-        {error && <p className="text-sm text-red-600 text-center">{error}</p>}
-
-        {/* TEMPORARY: Dev login button - remove before production */}
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={async () => {
-              if (!phone) {
-                setError("Введите номер телефона")
-                return
-              }
-              setLoading(true)
-              setError("")
-              try {
-                const res = await fetch("/api/auth/dev-login", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ phone })
-                })
-                const data = await res.json()
-                if (!res.ok) {
-                  setError(data.error || "Ошибка")
-                  return
-                }
-                const signInResult = await signIn("credentials", {
-                  phone: data.phone,
-                  verificationToken: data.verificationToken,
-                  redirect: false,
-                })
-                if (signInResult?.error) {
-                  setError("Ошибка авторизации")
-                  return
-                }
-                router.push("/")
-                router.refresh()
-              } catch {
-                setError("Ошибка сервера")
-              } finally {
-                setLoading(false)
-              }
-            }}
-            disabled={loading}
-            className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50"
-          >
-            {loading ? "Вход..." : "Войти без SMS (тест)"}
-          </button>
-        </div>
+        {error && <p className="text-sm text-red-600 text-center mt-4">{error}</p>}
       </div>
     </div>
   )
