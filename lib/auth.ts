@@ -1,9 +1,33 @@
 import NextAuth, { type NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { prisma } from "./prisma"
+import bcrypt from "bcryptjs"
 
 export const authOptions: NextAuthOptions = {
   providers: [
+    // Password login for staff (dispatcher/driver)
+    CredentialsProvider({
+      name: "Password",
+      credentials: {
+        phone: { label: "Phone", type: "tel" },
+        password: { label: "Password", type: "password" }
+      },
+      async authorize(credentials) {
+        if (!credentials?.phone || !credentials?.password) return null
+
+        const phone = normalizePhone(credentials.phone)
+        const user = await prisma.user.findUnique({ where: { phone } })
+
+        if (!user || !user.passwordHash) return null
+        if (user.role !== "dispatcher" && user.role !== "driver") return null
+
+        const valid = await bcrypt.compare(credentials.password, user.passwordHash)
+        if (!valid) return null
+
+        return { id: user.id, phone: user.phone, name: user.name, role: user.role }
+      }
+    }),
+    // FlashCall login for customers
     CredentialsProvider({
       name: "Callback",
       credentials: {
@@ -11,17 +35,10 @@ export const authOptions: NextAuthOptions = {
         verificationToken: { label: "Verification Token", type: "text" }
       },
       async authorize(credentials) {
-        if (!credentials?.phone || !credentials?.verificationToken) {
-          return null
-        }
+        if (!credentials?.phone || !credentials?.verificationToken) return null
 
-        const phone = credentials.phone as string
+        const phone = normalizePhone(credentials.phone)
         const token = credentials.verificationToken as string
-
-        let clean = phone.replace(/\D/g, "")
-        if (clean.startsWith("8")) clean = "7" + clean.slice(1)
-        if (!clean.startsWith("7")) clean = "7" + clean
-        const normalizedPhone = "+" + clean
 
         const verificationToken = await prisma.verificationToken.findUnique({
           where: { token }
@@ -29,7 +46,7 @@ export const authOptions: NextAuthOptions = {
 
         if (
           !verificationToken ||
-          verificationToken.phone !== normalizedPhone ||
+          verificationToken.phone !== phone ||
           verificationToken.isUsed ||
           verificationToken.expiresAt < new Date()
         ) {
@@ -41,9 +58,9 @@ export const authOptions: NextAuthOptions = {
           data: { isUsed: true }
         })
 
-        let user = await prisma.user.findUnique({ where: { phone: normalizedPhone } })
+        let user = await prisma.user.findUnique({ where: { phone } })
         if (!user) {
-          user = await prisma.user.create({ data: { phone: normalizedPhone } })
+          user = await prisma.user.create({ data: { phone } })
         }
 
         return { id: user.id, phone: user.phone, name: user.name, role: user.role }
@@ -71,6 +88,13 @@ export const authOptions: NextAuthOptions = {
     }
   },
   secret: process.env.NEXTAUTH_SECRET,
+}
+
+function normalizePhone(phone: string): string {
+  let clean = phone.replace(/\D/g, "")
+  if (clean.startsWith("8")) clean = "7" + clean.slice(1)
+  if (!clean.startsWith("7")) clean = "7" + clean
+  return "+" + clean
 }
 
 export default NextAuth(authOptions)

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { signIn } from "next-auth/react"
+import Link from "next/link"
 
 const TIMEOUT_SECONDS = 60
 
@@ -276,6 +277,12 @@ export default function SignInPage() {
         )}
 
         {error && <p className="text-sm text-red-600 text-center mt-4">{error}</p>}
+
+        <div className="mt-6 text-center">
+          <Link href="/auth/staff-login" className="text-sm text-[#2D6A8F] hover:text-[#1A2332]">
+            Вход для сотрудников (по паролю)
+          </Link>
+        </div>
       </div>
     </div>
   )

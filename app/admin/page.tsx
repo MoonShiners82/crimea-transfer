@@ -102,6 +102,11 @@ export default function AdminPage() {
   const [cancellingId, setCancellingId] = useState<string | null>(null)
   const [completingId, setCompletingId] = useState<string | null>(null)
 
+  // Password modal
+  const [passwordModalUser, setPasswordModalUser] = useState<{ id: string; phone: string; name: string | null } | null>(null)
+  const [newPassword, setNewPassword] = useState("")
+  const [settingPassword, setSettingPassword] = useState(false)
+
   const fetchBookings = async () => {
     try {
       const params = new URLSearchParams()
@@ -191,6 +196,25 @@ export default function AdminPage() {
       if (res.ok) fetchDispatchers()
       else alert("Ошибка")
     } catch { alert("Ошибка сервера") }
+  }
+
+  const handleSetPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!passwordModalUser || !newPassword) return
+    setSettingPassword(true)
+    try {
+      const res = await fetch("/api/admin/set-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: passwordModalUser.id, password: newPassword })
+      })
+      if (res.ok) { setPasswordModalUser(null); setNewPassword("") }
+      else {
+        const data = await res.json()
+        alert(data.error || "Ошибка")
+      }
+    } catch { alert("Ошибка сервера") }
+    finally { setSettingPassword(false) }
   }
 
   useEffect(() => {
@@ -536,7 +560,11 @@ export default function AdminPage() {
                       <td className="px-4 py-3 text-sm font-medium">{d.name || "—"}</td>
                       <td className="px-4 py-3"><span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">Диспетчер</span></td>
                       <td className="px-4 py-3">
-                        <button onClick={() => handleRemoveDispatcher(d.id)} className="text-red-500 hover:text-red-700 text-sm">Снять полномочия</button>
+                        <div className="flex gap-2">
+                          <button onClick={() => { setPasswordModalUser(d); setNewPassword("") }}
+                            className="bg-[#2D6A8F] text-white px-2 py-1 rounded text-xs font-medium hover:bg-[#245a7a]">Пароль</button>
+                          <button onClick={() => handleRemoveDispatcher(d.id)} className="text-red-500 hover:text-red-700 text-sm">Снять</button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -607,6 +635,28 @@ export default function AdminPage() {
               <div className="flex gap-2 pt-2">
                 <button type="submit" disabled={addingDriver} className="flex-1 bg-[#E8A838] text-[#1A2332] p-2 rounded-lg font-semibold hover:bg-[#d49a30] disabled:opacity-50">{addingDriver ? "Добавление..." : "Добавить"}</button>
                 <button type="button" onClick={() => setShowDriverModal(false)} className="flex-1 bg-gray-200 p-2 rounded-lg font-semibold hover:bg-gray-300">Отмена</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Set Password Modal */}
+      {passwordModalUser && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setPasswordModalUser(null)}>
+          <div className="bg-white rounded-lg max-w-md w-full p-6 border border-[#B8D4E3]" onClick={e => e.stopPropagation()}>
+            <h2 className="text-xl font-bold mb-4 text-[#1A2332]" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>Установить пароль</h2>
+            <p className="text-sm text-[#8B7355] mb-4">
+              {passwordModalUser.name || passwordModalUser.phone}
+            </p>
+            <form onSubmit={handleSetPassword} className="space-y-3">
+              <input type="password" placeholder="Новый пароль (мин. 6 символов)" value={newPassword} onChange={e => setNewPassword(e.target.value)}
+                className="w-full p-2 border border-[#B8D4E3] rounded-lg" required minLength={6} autoFocus />
+              <div className="flex gap-2 pt-2">
+                <button type="submit" disabled={settingPassword} className="flex-1 bg-[#E8A838] text-[#1A2332] p-2 rounded-lg font-semibold hover:bg-[#d49a30] disabled:opacity-50">
+                  {settingPassword ? "Сохранение..." : "Сохранить"}
+                </button>
+                <button type="button" onClick={() => setPasswordModalUser(null)} className="flex-1 bg-gray-200 p-2 rounded-lg font-semibold hover:bg-gray-300">Отмена</button>
               </div>
             </form>
           </div>

@@ -17,6 +17,7 @@ model User {
   phone         String    @unique
   name          String?
   role          String    @default("user")
+  passwordHash  String?
   createdAt     DateTime  @default(now())
   bookings      Booking[]
   driver        Driver?
