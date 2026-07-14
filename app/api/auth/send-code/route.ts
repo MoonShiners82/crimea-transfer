@@ -21,7 +21,9 @@ export async function POST(req: Request) {
 
     const result = await requestReverseFlashCall(normalizedPhone, webhookUrl)
 
-    console.log(`Reverse Flash Call for ${normalizedPhone}, call to: ${result.phone}`)
+    console.log(`[send-code] Phone: ${normalizedPhone}`)
+    console.log(`[send-code] webhookUrl: ${webhookUrl}`)
+    console.log(`[send-code] Plusofon response — callTo: ${result.phone}, key: ${result.key}`)
 
     return NextResponse.json({
       success: true,

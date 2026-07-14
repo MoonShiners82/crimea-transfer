@@ -12,6 +12,8 @@ export async function POST(req: Request) {
   try {
     const { phone } = await req.json()
 
+    console.log("[verify-code] Incoming phone:", phone)
+
     if (!phone) {
       return NextResponse.json({ error: "Phone required" }, { status: 400 })
     }
@@ -20,6 +22,8 @@ export async function POST(req: Request) {
     // Also try without + prefix for compatibility
     const phoneWithoutPlus = normalizedPhone.startsWith("+") ? normalizedPhone.slice(1) : normalizedPhone
     const phoneWithPlus = normalizedPhone.startsWith("+") ? normalizedPhone : "+" + normalizedPhone
+
+    console.log("[verify-code] Searching with phones:", normalizedPhone, phoneWithPlus, phoneWithoutPlus)
 
     // Check if webhook created a verification token for this phone
     const verificationToken = await prisma.verificationToken.findFirst({
@@ -30,6 +34,11 @@ export async function POST(req: Request) {
       },
       orderBy: { createdAt: "desc" }
     })
+
+    console.log("[verify-code] Token found:", verificationToken ? "YES" : "NO")
+    if (verificationToken) {
+      console.log("[verify-code] Token id:", verificationToken.id, "phone:", verificationToken.phone)
+    }
 
     if (!verificationToken) {
       return NextResponse.json({ error: "pending" })

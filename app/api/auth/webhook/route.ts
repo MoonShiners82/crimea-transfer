@@ -4,12 +4,37 @@ import { randomBytes } from "crypto"
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json()
+    // Log everything — headers, URL, full body
+    console.log("[webhook] === INCOMING WEBHOOK ===")
+    console.log("[webhook] URL:", req.url)
+    console.log("[webhook] Method:", req.method)
+    console.log("[webhook] Headers:", JSON.stringify(Object.fromEntries(req.headers.entries())))
 
-    console.log("Plusofon webhook:", JSON.stringify(body))
+    const rawBody = await req.text()
+    console.log("[webhook] Raw body:", rawBody)
 
-    // Plusofon sends: phone, key, and possibly other fields
-    const phone = body.phone || body.number_a || body.caller
+    let body: Record<string, unknown>
+    try {
+      body = JSON.parse(rawBody)
+    } catch {
+      console.log("[webhook] Failed to parse JSON body")
+      return NextResponse.json({ success: true })
+    }
+
+    console.log("[webhook] Parsed body keys:", Object.keys(body).join(", "))
+    console.log("[webhook] Full body:", JSON.stringify(body, null, 2))
+
+    // Log every possible phone field
+    console.log("[webhook] body.phone:", body.phone)
+    console.log("[webhook] body.number_a:", body.number_a)
+    console.log("[webhook] body.caller:", body.caller)
+    console.log("[webhook] body.caller_number:", body.caller_number)
+    console.log("[webhook] body.from:", body.from)
+    console.log("[webhook] body.key:", body.key)
+    console.log("[webhook] body.status:", body.status)
+
+    // Try all known phone field names
+    const phone = body.phone || body.number_a || body.caller || body.caller_number || body.from
     const key = body.key
 
     if (!phone) {
