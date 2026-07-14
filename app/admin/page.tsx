@@ -100,18 +100,6 @@ export default function AdminPage() {
   const [cancellingId, setCancellingId] = useState<string | null>(null)
   const [completingId, setCompletingId] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (authStatus === "unauthenticated") router.push("/auth/signin")
-  }, [authStatus, router])
-
-  useEffect(() => {
-    if (authStatus === "authenticated") {
-      fetchBookings()
-      fetchStats()
-      fetchDrivers()
-    }
-  }, [authStatus, filterStatus, searchQuery])
-
   const fetchBookings = async () => {
     try {
       const params = new URLSearchParams()
@@ -137,6 +125,20 @@ export default function AdminPage() {
       if (res.ok) setDrivers(await res.json())
     } catch (e) { console.error(e) }
   }
+
+  useEffect(() => {
+    if (authStatus === "unauthenticated") router.push("/auth/signin")
+    else if (authStatus === "authenticated" && session?.user?.role !== "admin") router.push("/")
+  }, [authStatus, session, router])
+
+  useEffect(() => {
+    if (authStatus === "authenticated") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchBookings()
+      fetchStats()
+      fetchDrivers()
+    }
+  })
 
   const handleConfirm = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -172,6 +174,8 @@ export default function AdminPage() {
 
   const handleStatus = async (bookingId: string, newStatus: string) => {
     if (!confirm(`Изменить статус на "${statusText[newStatus]}"?`)) return
+    const setter = newStatus === "completed" ? setCompletingId : setCancellingId
+    setter(bookingId)
     try {
       const res = await fetch("/api/admin/bookings/status", {
         method: "POST",
@@ -181,6 +185,7 @@ export default function AdminPage() {
       if (res.ok) { fetchBookings(); fetchStats() }
       else alert("Ошибка")
     } catch { alert("Ошибка сервера") }
+    finally { setter(null) }
   }
 
   const handleAddDriver = async (e: React.FormEvent) => {
