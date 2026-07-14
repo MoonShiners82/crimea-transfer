@@ -4,37 +4,35 @@ import { randomBytes } from "crypto"
 
 export async function POST(req: Request) {
   try {
-    // Log everything — headers, URL, full body
     console.log("[webhook] === INCOMING WEBHOOK ===")
     console.log("[webhook] URL:", req.url)
     console.log("[webhook] Method:", req.method)
-    console.log("[webhook] Headers:", JSON.stringify(Object.fromEntries(req.headers.entries())))
+
+    const contentType = req.headers.get("content-type") || ""
+    console.log("[webhook] Content-Type:", contentType)
 
     const rawBody = await req.text()
     console.log("[webhook] Raw body:", rawBody)
 
-    let body: Record<string, unknown>
-    try {
-      body = JSON.parse(rawBody)
-    } catch {
-      console.log("[webhook] Failed to parse JSON body")
-      return NextResponse.json({ success: true })
+    let body: Record<string, string> = {}
+
+    if (contentType.includes("application/x-www-form-urlencoded")) {
+      const params = new URLSearchParams(rawBody)
+      params.forEach((value, key) => { body[key] = value })
+    } else {
+      try {
+        body = JSON.parse(rawBody)
+      } catch {
+        console.log("[webhook] Failed to parse body as JSON or form-urlencoded")
+        return NextResponse.json({ success: true })
+      }
     }
 
-    console.log("[webhook] Parsed body keys:", Object.keys(body).join(", "))
-    console.log("[webhook] Full body:", JSON.stringify(body, null, 2))
+    console.log("[webhook] Parsed body:", JSON.stringify(body))
+    console.log("[webhook] phone:", body.phone)
+    console.log("[webhook] key:", body.key)
 
-    // Log every possible phone field
-    console.log("[webhook] body.phone:", body.phone)
-    console.log("[webhook] body.number_a:", body.number_a)
-    console.log("[webhook] body.caller:", body.caller)
-    console.log("[webhook] body.caller_number:", body.caller_number)
-    console.log("[webhook] body.from:", body.from)
-    console.log("[webhook] body.key:", body.key)
-    console.log("[webhook] body.status:", body.status)
-
-    // Try all known phone field names
-    const phone = body.phone || body.number_a || body.caller || body.caller_number || body.from
+    const phone = body.phone || body.number_a || body.caller
     const key = body.key
 
     if (!phone) {
