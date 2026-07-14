@@ -1,8 +1,10 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { signIn } from "next-auth/react"
+
+const TIMEOUT_SECONDS = 60
 
 export default function SignInPage() {
   const router = useRouter()
@@ -14,12 +16,23 @@ export default function SignInPage() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const [checking, setChecking] = useState(false)
+  const [elapsed, setElapsed] = useState(0)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const clearTimers = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current)
+      timerRef.current = null
+    }
+  }, [])
 
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     setMessage("")
     setLoading(true)
+    clearTimers()
+    setElapsed(0)
 
     try {
       const res = await fetch("/api/auth/send-code", {
@@ -55,18 +68,20 @@ export default function SignInPage() {
       const res = await fetch("/api/auth/verify-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, key: authKey })
+        body: JSON.stringify({ phone })
       })
 
       const data = await res.json()
 
       if (!res.ok) {
-        if (data.error?.includes("ещё не поступил")) {
+        if (data.error === "pending") {
           return
         }
         setError(data.error || "Ошибка")
         return
       }
+
+      clearTimers()
 
       const signInResult = await signIn("credentials", {
         phone,
@@ -86,14 +101,28 @@ export default function SignInPage() {
     } finally {
       setChecking(false)
     }
-  }, [phone, authKey, router])
+  }, [phone, authKey, router, clearTimers])
 
+  // Poll for verification + countdown timer
   useEffect(() => {
     if (step !== "call" || !authKey) return
 
-    const interval = setInterval(handleVerify, 3000)
-    return () => clearInterval(interval)
-  }, [step, authKey, handleVerify])
+    timerRef.current = setInterval(() => {
+      setElapsed((prev) => {
+        if (prev >= TIMEOUT_SECONDS) {
+          clearTimers()
+          return prev
+        }
+        return prev + 1
+      })
+      handleVerify()
+    }, 3000)
+
+    return () => clearTimers()
+  }, [step, authKey, handleVerify, clearTimers])
+
+  const timedOut = elapsed >= TIMEOUT_SECONDS
+  const remaining = Math.max(0, TIMEOUT_SECONDS - elapsed)
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#1A2332] via-[#2D6A8F] to-[#B8D4E3] flex items-center justify-center py-12 px-4">
@@ -145,22 +174,52 @@ export default function SignInPage() {
               </p>
             </div>
 
-            {message && <p className="text-sm text-[#2D6A8F] text-center">{message}</p>}
+            {!timedOut && (
+              <div className="text-center">
+                <p className="text-xs text-[#8B7355]">
+                  Ожидание ответа... {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, "0")}
+                </p>
+              </div>
+            )}
+
+            {message && !timedOut && <p className="text-sm text-[#2D6A8F] text-center">{message}</p>}
 
             {checking && (
               <div className="flex items-center justify-center gap-2">
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-[#2D6A8F] border-t-transparent"></div>
-                <span className="text-sm text-[#8B7355]">Ожидание звонка...</span>
+                <span className="text-sm text-[#8B7355]">Проверка...</span>
               </div>
             )}
 
-            <button
-              onClick={handleVerify}
-              disabled={checking}
-              className="w-full bg-[#2D6A8F] text-white py-3 rounded-lg font-semibold hover:bg-[#245a7a] transition disabled:opacity-50"
-            >
-              Я позвонил, проверить
-            </button>
+            {timedOut ? (
+              <div className="space-y-3">
+                <p className="text-sm text-center text-red-600">
+                  Звонок не был подтверждён. Возможно, номер не ответил или произошла ошибка сети.
+                </p>
+                <button
+                  onClick={() => {
+                    setStep("phone")
+                    setCallTo("")
+                    setAuthKey("")
+                    setError("")
+                    setMessage("")
+                    clearTimers()
+                    setElapsed(0)
+                  }}
+                  className="w-full bg-[#E8A838] text-[#1A2332] py-3 rounded-lg font-semibold hover:bg-[#d49a30] transition"
+                >
+                  Попробовать снова
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleVerify}
+                disabled={checking}
+                className="w-full bg-[#2D6A8F] text-white py-3 rounded-lg font-semibold hover:bg-[#245a7a] transition disabled:opacity-50"
+              >
+                Я позвонил, проверить
+              </button>
+            )}
 
             <div className="flex justify-between">
               <button
@@ -171,41 +230,47 @@ export default function SignInPage() {
                   setAuthKey("")
                   setError("")
                   setMessage("")
+                  clearTimers()
+                  setElapsed(0)
                 }}
                 className="text-sm text-[#8B7355] hover:text-[#1A2332]"
               >
                 Изменить номер
               </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  setError("")
-                  setMessage("")
-                  setLoading(true)
-                  try {
-                    const res = await fetch("/api/auth/send-code", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ phone })
-                    })
-                    const data = await res.json()
-                    if (!res.ok) {
-                      setError(data.error || "Ошибка")
-                    } else {
-                      setCallTo(data.callTo)
-                      setAuthKey(data.key)
-                      setMessage("Новый номер получен")
+              {!timedOut && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setError("")
+                    setMessage("")
+                    setLoading(true)
+                    clearTimers()
+                    setElapsed(0)
+                    try {
+                      const res = await fetch("/api/auth/send-code", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ phone })
+                      })
+                      const data = await res.json()
+                      if (!res.ok) {
+                        setError(data.error || "Ошибка")
+                      } else {
+                        setCallTo(data.callTo)
+                        setAuthKey(data.key)
+                        setMessage("Новый номер получен")
+                      }
+                    } catch {
+                      setError("Ошибка сервера")
+                    } finally {
+                      setLoading(false)
                     }
-                  } catch {
-                    setError("Ошибка сервера")
-                  } finally {
-                    setLoading(false)
-                  }
-                }}
-                className="text-sm text-[#2D6A8F] hover:text-[#1A2332]"
-              >
-                Получить новый номер
-              </button>
+                  }}
+                  className="text-sm text-[#2D6A8F] hover:text-[#1A2332]"
+                >
+                  Получить новый номер
+                </button>
+              )}
             </div>
           </div>
         )}
