@@ -57,20 +57,3 @@ export async function requestReverseFlashCall(phone: string, hookUrl: string): P
 
   return { phone: result.data.phone, key: result.data.key }
 }
-
-export interface CheckStatusResponse {
-  status: "pending" | "verified" | "expired" | "failed"
-}
-
-export async function checkCallbackStatus(key: string): Promise<CheckStatusResponse> {
-  if (!PLUSOFON_API_KEY) {
-    throw new Error("PLUSOFON_API_KEY must be set")
-  }
-
-  const result = await plusofonRequest<{ status: string }>(
-    "/api/v1/flash-call/check",
-    { params: { key } }
-  )
-
-  return { status: result.data.status as CheckStatusResponse["status"] }
-}

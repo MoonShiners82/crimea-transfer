@@ -19,6 +19,8 @@ model User {
   role          String    @default("user")
   createdAt     DateTime  @default(now())
   bookings      Booking[]
+
+  @@index([role])
 }
 model Route {
   id              String    @id @default(cuid())
@@ -50,15 +52,11 @@ model Booking {
   createdAt       DateTime  @default(now())
   confirmedAt     DateTime?
   cancelReason    String?
-}
 
-model OtpCode {
-  id        String    @id @default(cuid())
-  phone     String
-  code      String
-  expiresAt DateTime
-  isUsed    Boolean   @default(false)
-  createdAt DateTime  @default(now())
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([datetime])
 }
 
 model VerificationToken {
@@ -68,6 +66,8 @@ model VerificationToken {
   expiresAt DateTime
   isUsed    Boolean   @default(false)
   createdAt DateTime  @default(now())
+
+  @@index([phone])
 }
 
 model Driver {
@@ -77,16 +77,4 @@ model Driver {
   carInfo   String
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
-}
-
-model BackgroundCheck {
-  id              String    @id @default(cuid())
-  fullName        String
-  passportNumber  String
-  birthDate       String
-  hasRecord       Boolean
-  recordType      String?
-  details         String?
-  checkedAt       DateTime  @default(now())
-  checkedBy       String?
 }

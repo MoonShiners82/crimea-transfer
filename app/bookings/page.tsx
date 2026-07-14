@@ -33,13 +33,13 @@ const statusLabels: Record<string, { text: string; color: string }> = {
 
 const baggageLabels: Record<string, string> = {
   none: "Без багажа",
-  small: "Маленький",
-  medium: "Средний",
-  large: "Большой",
+  "1": "1 чемодан",
+  "2plus": "2+ чемодана",
+  oversized: "Негабаритный",
 }
 
 export default function BookingsPage() {
-  const { data: session, status: sessionStatus } = useSession()
+  const { status: sessionStatus } = useSession()
   const router = useRouter()
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)

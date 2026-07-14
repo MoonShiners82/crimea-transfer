@@ -96,13 +96,13 @@ export default function Home() {
             Готовы к поездке?
           </h2>
           <p className="text-[#8B7355] text-lg mb-8 max-w-xl mx-auto">
-            Забронируйте трансфер прямо сейчас и получите скидку 10% на первую поездку
+            Забронируйте трансфер прямо сейчас — это займёт всего 2 минуты
           </p>
           <Link
             href={session?.user ? "/booking" : "/auth/signin"}
             className="inline-block bg-[#E8A838] text-[#1A2332] px-8 py-4 rounded-lg font-semibold text-lg hover:bg-[#d49a30] transition shadow-lg"
           >
-            Забронировать со скидкой
+            Забронировать трансфер
           </Link>
         </div>
       </section>

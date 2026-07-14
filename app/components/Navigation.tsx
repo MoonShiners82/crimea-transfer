@@ -35,7 +35,7 @@ export default function Navigation() {
                 >
                   Мои бронирования
                 </Link>
-                {(session.user as any).role === "admin" && (
+                {session.user.role === "admin" && (
                   <Link
                     href="/admin"
                     className="text-white/80 hover:text-white transition"
@@ -45,7 +45,7 @@ export default function Navigation() {
                 )}
                 <div className="flex items-center gap-3 ml-4 pl-4 border-l border-white/20">
                   <span className="text-sm text-white/60">
-                    {(session.user as any).phone}
+                    {session.user.phone}
                   </span>
                   <button
                     onClick={() => signOut({ callbackUrl: "/" })}

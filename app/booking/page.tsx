@@ -16,13 +16,13 @@ type Route = {
 
 const baggageOptions = [
   { value: "none", label: "Без багажа", icon: "🧳" },
-  { value: "1", label: "1 чемодан", icon: " suitcase" },
+  { value: "1", label: "1 чемодан", icon: "🧳" },
   { value: "2plus", label: "2+ чемодана", icon: "🧳🧳" },
   { value: "oversized", label: "Негабаритный", icon: "📦" }
 ]
 
 export default function BookingPage() {
-  const { data: session, status } = useSession()
+  const { status } = useSession()
   const router = useRouter()
   const [routes, setRoutes] = useState<Route[]>([])
   const [routeId, setRouteId] = useState("")
@@ -44,7 +44,6 @@ export default function BookingPage() {
   }, [status, router])
 
   useEffect(() => {
-    setRoutesLoading(true)
     fetch("/api/routes")
       .then(res => res.json())
       .then(data => {

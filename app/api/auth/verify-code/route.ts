@@ -18,7 +18,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Phone required" }, { status: 400 })
     }
 
-    let normalizedPhone = normalizePhone(phone)
+    const normalizedPhone = normalizePhone(phone)
     // Also try without + prefix for compatibility
     const phoneWithoutPlus = normalizedPhone.startsWith("+") ? normalizedPhone.slice(1) : normalizedPhone
     const phoneWithPlus = normalizedPhone.startsWith("+") ? normalizedPhone : "+" + normalizedPhone
