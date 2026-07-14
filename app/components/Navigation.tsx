@@ -43,6 +43,22 @@ export default function Navigation() {
                     Админка
                   </Link>
                 )}
+                {session.user.role === "driver" && (
+                  <Link
+                    href="/driver"
+                    className="text-white/80 hover:text-white transition"
+                  >
+                    Водитель
+                  </Link>
+                )}
+                {session.user.role === "user" && (
+                  <Link
+                    href="/driver/register"
+                    className="text-[#E8A838] hover:text-[#d49a30] transition text-sm"
+                  >
+                    Стать водителем
+                  </Link>
+                )}
                 <div className="flex items-center gap-3 ml-4 pl-4 border-l border-white/20">
                   <span className="text-sm text-white/60">
                     {session.user.phone}

@@ -19,6 +19,7 @@ model User {
   role          String    @default("user")
   createdAt     DateTime  @default(now())
   bookings      Booking[]
+  driver        Driver?
 
   @@index([role])
 }
@@ -40,6 +41,8 @@ model Booking {
   user            User      @relation(fields: [userId], references: [id])
   routeId         String
   route           Route     @relation(fields: [routeId], references: [id])
+  driverId        String?
+  driver          Driver?   @relation(fields: [driverId], references: [id])
   datetime        DateTime
   passengers      Int
   baggageType     String
@@ -54,6 +57,7 @@ model Booking {
   cancelReason    String?
 
   @@index([userId])
+  @@index([driverId])
   @@index([status])
   @@index([createdAt])
   @@index([datetime])
@@ -71,10 +75,18 @@ model VerificationToken {
 }
 
 model Driver {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
+  userId    String?   @unique
+  user      User?     @relation(fields: [userId], references: [id])
   name      String
   phone     String
   carInfo   String
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
+  photoUrl  String?
+  status    String    @default("pending") // pending | approved | rejected
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  bookings  Booking[]
+
+  @@index([userId])
+  @@index([status])
 }

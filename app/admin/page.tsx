@@ -64,10 +64,11 @@ const statusText: Record<string, string> = {
 export default function AdminPage() {
   const { data: session, status: authStatus } = useSession()
   const router = useRouter()
-  const [tab, setTab] = useState<"bookings" | "drivers">("bookings")
+  const [tab, setTab] = useState<"bookings" | "drivers" | "applications">("bookings")
   const [bookings, setBookings] = useState<Booking[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
   const [drivers, setDrivers] = useState<Driver[]>([])
+  const [applications, setApplications] = useState<Driver[]>([])
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
@@ -126,6 +127,39 @@ export default function AdminPage() {
     } catch (e) { console.error(e) }
   }
 
+  const fetchApplications = async () => {
+    try {
+      const res = await fetch("/api/admin/drivers?status=pending")
+      if (res.ok) setApplications(await res.json())
+    } catch (e) { console.error(e) }
+  }
+
+  const handleApproveDriver = async (driverId: string) => {
+    if (!confirm("Одобрить заявку водителя?")) return
+    try {
+      const res = await fetch("/api/admin/drivers/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ driverId })
+      })
+      if (res.ok) { fetchApplications(); fetchDrivers() }
+      else alert("Ошибка")
+    } catch { alert("Ошибка сервера") }
+  }
+
+  const handleRejectDriver = async (driverId: string) => {
+    if (!confirm("Отклонить заявку водителя?")) return
+    try {
+      const res = await fetch("/api/admin/drivers/reject", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ driverId })
+      })
+      if (res.ok) fetchApplications()
+      else alert("Ошибка")
+    } catch { alert("Ошибка сервера") }
+  }
+
   useEffect(() => {
     if (authStatus === "unauthenticated") router.push("/auth/signin")
     else if (authStatus === "authenticated" && session?.user?.role !== "admin") router.push("/")
@@ -137,6 +171,7 @@ export default function AdminPage() {
       fetchBookings()
       fetchStats()
       fetchDrivers()
+      fetchApplications()
     }
   })
 
@@ -260,9 +295,12 @@ export default function AdminPage() {
         )}
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-2 mb-6 flex-wrap">
           <button onClick={() => setTab("bookings")} className={`px-4 py-2 rounded-lg text-sm font-medium transition ${tab === "bookings" ? "bg-[#1A2332] text-white" : "bg-white text-[#1A2332] hover:bg-gray-100 border border-[#B8D4E3]"}`}>Заявки</button>
           <button onClick={() => setTab("drivers")} className={`px-4 py-2 rounded-lg text-sm font-medium transition ${tab === "drivers" ? "bg-[#1A2332] text-white" : "bg-white text-[#1A2332] hover:bg-gray-100 border border-[#B8D4E3]"}`}>Водители</button>
+          <button onClick={() => setTab("applications")} className={`px-4 py-2 rounded-lg text-sm font-medium transition ${tab === "applications" ? "bg-[#1A2332] text-white" : "bg-white text-[#1A2332] hover:bg-gray-100 border border-[#B8D4E3]"}`}>
+            Заявки водителей {applications.length > 0 && <span className="ml-1 bg-[#E8A838] text-[#1A2332] px-1.5 py-0.5 rounded-full text-xs">{applications.length}</span>}
+          </button>
           <div className="ml-auto flex gap-2">
             <button onClick={() => handleExport("csv")} className="bg-white text-[#1A2332] px-3 py-2 rounded-lg text-sm hover:bg-gray-100 border border-[#B8D4E3] transition">📥 CSV</button>
             <button onClick={() => handleExport("json")} className="bg-white text-[#1A2332] px-3 py-2 rounded-lg text-sm hover:bg-gray-100 border border-[#B8D4E3] transition">📥 JSON</button>
@@ -376,6 +414,55 @@ export default function AdminPage() {
                 </tbody>
               </table>
               {drivers.length === 0 && <div className="text-center py-12 text-[#8B7355]">Водителей пока нет. Добавьте первого!</div>}
+            </div>
+          </>
+        )}
+
+        {/* Applications Tab */}
+        {tab === "applications" && (
+          <>
+            <h2 className="text-xl font-semibold text-[#1A2332] mb-4" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>Заявки водителей</h2>
+            <div className="bg-white rounded-lg border border-[#B8D4E3] overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-[#F5F0EB]">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Фото</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Имя</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Телефон</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Автомобиль</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Дата</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Действия</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#B8D4E3]">
+                  {applications.map((d) => (
+                    <tr key={d.id} className="hover:bg-[#F5F0EB]/50">
+                      <td className="px-4 py-3">
+                        {d.photoUrl ? (
+                          <img src={d.photoUrl} alt={d.name} className="w-10 h-10 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-[#2D6A8F] text-white flex items-center justify-center font-bold">
+                            {d.name.charAt(0)}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm font-medium">{d.name}</td>
+                      <td className="px-4 py-3 text-sm">{d.phone}</td>
+                      <td className="px-4 py-3 text-sm">{d.carInfo}</td>
+                      <td className="px-4 py-3 text-sm text-[#8B7355]">{new Date(d.createdAt).toLocaleDateString("ru")}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          <button onClick={() => handleApproveDriver(d.id)}
+                            className="bg-green-500 text-white px-3 py-1 rounded text-xs font-medium hover:bg-green-600">Одобрить</button>
+                          <button onClick={() => handleRejectDriver(d.id)}
+                            className="bg-red-500 text-white px-3 py-1 rounded text-xs font-medium hover:bg-red-600">Отклонить</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {applications.length === 0 && <div className="text-center py-12 text-[#8B7355]">Новых заявок нет</div>}
             </div>
           </>
         )}
