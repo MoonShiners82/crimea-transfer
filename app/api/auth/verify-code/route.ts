@@ -44,12 +44,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "pending" })
     }
 
-    // Mark as used
-    await prisma.verificationToken.update({
-      where: { id: verificationToken.id },
-      data: { isUsed: true }
-    })
-
+    // Return token — do NOT mark as used here.
+    // Token is marked used in NextAuth authorize() after successful signIn.
     return NextResponse.json({
       success: true,
       verificationToken: verificationToken.token,
