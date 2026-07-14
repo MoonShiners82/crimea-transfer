@@ -1,0 +1,313 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
+
+type Booking = {
+  id: string
+  datetime: string
+  passengers: number
+  baggageType: string
+  priceCalculated: number
+  priceFinal: number | null
+  status: string
+  driverName: string | null
+  driverPhone: string | null
+  carInfo: string | null
+  createdAt: string
+  cancelReason: string | null
+  user: { phone: string; name: string | null }
+  route: { fromPoint: string; toPoint: string }
+}
+
+type Driver = {
+  id: string
+  name: string
+  phone: string
+  carInfo: string
+  isActive: boolean
+}
+
+type Stats = {
+  today: { total: number; pending: number; confirmed: number; completed: number; cancelled: number }
+  week: number
+  month: number
+  revenue: number
+}
+
+const statusOptions = [
+  { value: "", label: "Все" },
+  { value: "pending", label: "Ожидают" },
+  { value: "confirmed", label: "Подтверждённые" },
+  { value: "in_progress", label: "В пути" },
+  { value: "completed", label: "Завершённые" },
+  { value: "cancelled", label: "Отменённые" },
+]
+
+const statusColors: Record<string, string> = {
+  pending: "bg-yellow-100 text-yellow-800",
+  confirmed: "bg-green-100 text-green-800",
+  in_progress: "bg-blue-100 text-blue-800",
+  completed: "bg-gray-100 text-gray-800",
+  cancelled: "bg-red-100 text-red-800",
+}
+
+const statusText: Record<string, string> = {
+  pending: "Ожидает",
+  confirmed: "Подтверждена",
+  in_progress: "В пути",
+  completed: "Завершена",
+  cancelled: "Отменена",
+}
+
+export default function DispatcherPage() {
+  const { data: session, status: authStatus } = useSession()
+  const router = useRouter()
+  const [bookings, setBookings] = useState<Booking[]>([])
+  const [drivers, setDrivers] = useState<Driver[]>([])
+  const [stats, setStats] = useState<Stats | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [filterStatus, setFilterStatus] = useState("")
+  const [searchQuery, setSearchQuery] = useState("")
+
+  // Confirm modal
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
+  const [selectedDriverId, setSelectedDriverId] = useState("")
+  const [priceFinal, setPriceFinal] = useState("")
+  const [confirming, setConfirming] = useState(false)
+
+  // Loading states
+  const [cancellingId, setCancellingId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (authStatus === "unauthenticated") router.push("/auth/signin")
+    else if (authStatus === "authenticated" && session?.user?.role !== "dispatcher") router.push("/")
+  }, [authStatus, session, router])
+
+  useEffect(() => {
+    if (authStatus === "authenticated") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchBookings()
+      fetchStats()
+      fetchDrivers()
+    }
+  })
+
+  const fetchBookings = async () => {
+    try {
+      const params = new URLSearchParams()
+      if (filterStatus) params.set("status", filterStatus)
+      if (searchQuery) params.set("search", searchQuery)
+      const res = await fetch(`/api/dispatcher/bookings${params.toString() ? `?${params.toString()}` : ""}`)
+      if (res.status === 403) { router.push("/"); return }
+      setBookings(await res.json())
+    } catch (e) { console.error(e) }
+    finally { setLoading(false) }
+  }
+
+  const fetchStats = async () => {
+    try {
+      const res = await fetch("/api/dispatcher/stats")
+      if (res.ok) setStats(await res.json())
+    } catch (e) { console.error(e) }
+  }
+
+  const fetchDrivers = async () => {
+    try {
+      const res = await fetch("/api/admin/drivers")
+      if (res.ok) {
+        const all = await res.json()
+        setDrivers(all.filter((d: Driver) => d.isActive))
+      }
+    } catch (e) { console.error(e) }
+  }
+
+  const handleConfirm = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedBooking || !selectedDriverId) return
+    setConfirming(true)
+
+    const driver = drivers.find(d => d.id === selectedDriverId)
+    if (!driver) { setConfirming(false); return }
+
+    try {
+      const res = await fetch("/api/admin/bookings/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bookingId: selectedBooking.id,
+          driverName: driver.name,
+          driverPhone: driver.phone,
+          carInfo: driver.carInfo,
+          priceFinal: parseInt(priceFinal),
+          driverId: driver.id
+        })
+      })
+      if (res.ok) { setSelectedBooking(null); fetchBookings(); fetchStats() }
+      else alert("Ошибка подтверждения")
+    } catch { alert("Ошибка сервера") }
+    finally { setConfirming(false) }
+  }
+
+  const handleCancel = async (bookingId: string) => {
+    if (!confirm("Отменить бронирование?")) return
+    setCancellingId(bookingId)
+    try {
+      const res = await fetch("/api/admin/bookings/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId, status: "cancelled" })
+      })
+      if (res.ok) { fetchBookings(); fetchStats() }
+      else alert("Ошибка")
+    } catch { alert("Ошибка сервера") }
+    finally { setCancellingId(null) }
+  }
+
+  if (authStatus === "loading" || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F5F0EB]">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#2D6A8F] border-t-transparent"></div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-[#F5F0EB] py-8">
+      <div className="max-w-7xl mx-auto px-4">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-[#1A2332]" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
+            Панель диспетчера
+          </h1>
+        </div>
+
+        {/* Stats */}
+        {stats && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div className="bg-white rounded-lg p-4 border border-[#B8D4E3]">
+              <div className="text-sm text-[#8B7355]">Сегодня</div>
+              <div className="text-2xl font-bold text-[#1A2332]">{stats.today.total}</div>
+            </div>
+            <div className="bg-white rounded-lg p-4 border border-[#B8D4E3]">
+              <div className="text-sm text-[#8B7355]">Ожидают</div>
+              <div className="text-2xl font-bold text-yellow-600">{stats.today.pending}</div>
+            </div>
+            <div className="bg-white rounded-lg p-4 border border-[#B8D4E3]">
+              <div className="text-sm text-[#8B7355]">Выручка сегодня</div>
+              <div className="text-2xl font-bold text-[#2D6A8F]">{stats.revenue.toLocaleString("ru")} ₽</div>
+            </div>
+            <div className="bg-white rounded-lg p-4 border border-[#B8D4E3]">
+              <div className="text-sm text-[#8B7355]">За неделю</div>
+              <div className="text-2xl font-bold text-[#1A2332]">{stats.week}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Filters */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          {statusOptions.map((opt) => (
+            <button key={opt.value} onClick={() => setFilterStatus(opt.value)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${filterStatus === opt.value ? "bg-[#E8A838] text-[#1A2332]" : "bg-white text-[#1A2332] hover:bg-gray-100 border border-[#B8D4E3]"}`}>
+              {opt.label}
+            </button>
+          ))}
+          <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Поиск по телефону, имени, маршруту..." className="ml-auto px-4 py-2 border border-[#B8D4E3] rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-[#2D6A8F] bg-white" />
+        </div>
+
+        {/* Bookings */}
+        <div className="bg-white rounded-lg border border-[#B8D4E3] overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-[#F5F0EB]">
+                <tr>
+                  {["ID", "Дата", "Маршрут", "Клиент", "Водитель", "Пассажиры", "Цена", "Статус", "Действия"].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#B8D4E3]">
+                {bookings.map((b) => (
+                  <tr key={b.id} className="hover:bg-[#F5F0EB]/50">
+                    <td className="px-4 py-3 text-sm font-mono text-[#8B7355]">{b.id.slice(-6)}</td>
+                    <td className="px-4 py-3 text-sm">{new Date(b.datetime).toLocaleString("ru")}</td>
+                    <td className="px-4 py-3 text-sm font-medium">{b.route.fromPoint} → {b.route.toPoint}</td>
+                    <td className="px-4 py-3 text-sm">
+                      {b.user.name && <div className="font-medium">{b.user.name}</div>}
+                      <div className="text-[#8B7355]">{b.user.phone}</div>
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      {b.driverName ? (
+                        <div>
+                          <div className="font-medium">{b.driverName}</div>
+                          {b.driverPhone && <div className="text-[#8B7355] text-xs">{b.driverPhone}</div>}
+                        </div>
+                      ) : <span className="text-[#B8D4E3]">—</span>}
+                    </td>
+                    <td className="px-4 py-3 text-sm">{b.passengers} чел.</td>
+                    <td className="px-4 py-3 text-sm font-medium">{b.priceFinal || b.priceCalculated} ₽</td>
+                    <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[b.status]}`}>{statusText[b.status]}</span></td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-1 flex-wrap">
+                        {b.status === "pending" && (
+                          <button onClick={() => { setSelectedBooking(b); setPriceFinal(b.priceCalculated.toString()) }}
+                            className="bg-[#E8A838] text-[#1A2332] px-2 py-1 rounded text-xs font-medium hover:bg-[#d49a30]">Назначить</button>
+                        )}
+                        {(b.status === "pending" || b.status === "confirmed") && (
+                          <button onClick={() => handleCancel(b.id)} disabled={cancellingId === b.id}
+                            className="bg-red-500 text-white px-2 py-1 rounded text-xs font-medium hover:bg-red-600 disabled:opacity-50">
+                            {cancellingId === b.id ? "..." : "Отмена"}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {bookings.length === 0 && <div className="text-center py-12 text-[#8B7355]">Заявок пока нет</div>}
+        </div>
+      </div>
+
+      {/* Confirm Modal */}
+      {selectedBooking && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setSelectedBooking(null)}>
+          <div className="bg-white rounded-lg max-w-md w-full p-6 border border-[#B8D4E3]" onClick={e => e.stopPropagation()}>
+            <h2 className="text-xl font-bold mb-4 text-[#1A2332]" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
+              Назначение водителя
+            </h2>
+            <div className="bg-[#F5F0EB] p-3 rounded-lg mb-4 text-sm space-y-1">
+              <p><strong>Маршрут:</strong> {selectedBooking.route.fromPoint} → {selectedBooking.route.toPoint}</p>
+              <p><strong>Дата:</strong> {new Date(selectedBooking.datetime).toLocaleString("ru")}</p>
+              <p><strong>Клиент:</strong> {selectedBooking.user.name && `${selectedBooking.user.name} — `}{selectedBooking.user.phone}</p>
+              <p><strong>Пассажиры:</strong> {selectedBooking.passengers}</p>
+            </div>
+            <form onSubmit={handleConfirm} className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-[#1A2332] mb-1">Водитель *</label>
+                <select value={selectedDriverId} onChange={e => setSelectedDriverId(e.target.value)}
+                  className="w-full p-2 border border-[#B8D4E3] rounded-lg" required>
+                  <option value="">Выберите водителя</option>
+                  {drivers.map(d => (
+                    <option key={d.id} value={d.id}>{d.name} — {d.carInfo}</option>
+                  ))}
+                </select>
+              </div>
+              <input type="number" placeholder="Итоговая цена (руб)" value={priceFinal} onChange={e => setPriceFinal(e.target.value)}
+                className="w-full p-2 border border-[#B8D4E3] rounded-lg" required />
+              <div className="flex gap-2 pt-2">
+                <button type="submit" disabled={confirming} className="flex-1 bg-[#E8A838] text-[#1A2332] p-2 rounded-lg font-semibold hover:bg-[#d49a30] disabled:opacity-50">
+                  {confirming ? "Отправка..." : "Назначить"}
+                </button>
+                <button type="button" onClick={() => setSelectedBooking(null)} className="flex-1 bg-gray-200 p-2 rounded-lg font-semibold hover:bg-gray-300">Отмена</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

@@ -18,14 +18,14 @@ export async function POST(req: Request) {
       where: { phone: session.user.phone as string }
     })
 
-    if (!user || user.role !== "admin") {
+    if (!user || (user.role !== "admin" && user.role !== "dispatcher")) {
       return NextResponse.json(
         { error: "Доступ запрещён" },
         { status: 403 }
       )
     }
 
-    const { bookingId, driverName, driverPhone, carInfo, priceFinal } = await req.json()
+    const { bookingId, driverName, driverPhone, carInfo, priceFinal, driverId } = await req.json()
 
     if (!bookingId || !driverName || !driverPhone || !carInfo || !priceFinal) {
       return NextResponse.json(
@@ -42,6 +42,7 @@ export async function POST(req: Request) {
         driverPhone,
         carInfo,
         priceFinal,
+        ...(driverId && { driverId }),
         confirmedAt: new Date()
       },
       include: {

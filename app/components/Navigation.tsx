@@ -43,6 +43,14 @@ export default function Navigation() {
                     Админка
                   </Link>
                 )}
+                {session.user.role === "dispatcher" && (
+                  <Link
+                    href="/dispatcher"
+                    className="text-white/80 hover:text-white transition"
+                  >
+                    Диспетчер
+                  </Link>
+                )}
                 {session.user.role === "driver" && (
                   <Link
                     href="/driver"

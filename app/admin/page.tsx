@@ -64,11 +64,12 @@ const statusText: Record<string, string> = {
 export default function AdminPage() {
   const { data: session, status: authStatus } = useSession()
   const router = useRouter()
-  const [tab, setTab] = useState<"bookings" | "drivers" | "applications">("bookings")
+  const [tab, setTab] = useState<"bookings" | "drivers" | "applications" | "dispatchers">("bookings")
   const [bookings, setBookings] = useState<Booking[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
   const [drivers, setDrivers] = useState<Driver[]>([])
   const [applications, setApplications] = useState<Driver[]>([])
+  const [dispatchers, setDispatchers] = useState<{ id: string; phone: string; name: string | null; role: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
@@ -160,6 +161,38 @@ export default function AdminPage() {
     } catch { alert("Ошибка сервера") }
   }
 
+  const fetchDispatchers = async () => {
+    try {
+      const res = await fetch("/api/admin/dispatchers")
+      if (res.ok) setDispatchers(await res.json())
+    } catch (e) { console.error(e) }
+  }
+
+  const handleSetDispatcher = async (phone: string) => {
+    if (!confirm(`Назначить ${phone} диспетчером?`)) return
+    try {
+      const res = await fetch("/api/admin/dispatchers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone })
+      })
+      if (res.ok) fetchDispatchers()
+      else {
+        const data = await res.json()
+        alert(data.error || "Ошибка")
+      }
+    } catch { alert("Ошибка сервера") }
+  }
+
+  const handleRemoveDispatcher = async (userId: string) => {
+    if (!confirm("Снять полномочия диспетчера?")) return
+    try {
+      const res = await fetch(`/api/admin/dispatchers?id=${userId}`, { method: "DELETE" })
+      if (res.ok) fetchDispatchers()
+      else alert("Ошибка")
+    } catch { alert("Ошибка сервера") }
+  }
+
   useEffect(() => {
     if (authStatus === "unauthenticated") router.push("/auth/signin")
     else if (authStatus === "authenticated" && session?.user?.role !== "admin") router.push("/")
@@ -172,6 +205,7 @@ export default function AdminPage() {
       fetchStats()
       fetchDrivers()
       fetchApplications()
+      fetchDispatchers()
     }
   })
 
@@ -301,6 +335,7 @@ export default function AdminPage() {
           <button onClick={() => setTab("applications")} className={`px-4 py-2 rounded-lg text-sm font-medium transition ${tab === "applications" ? "bg-[#1A2332] text-white" : "bg-white text-[#1A2332] hover:bg-gray-100 border border-[#B8D4E3]"}`}>
             Заявки водителей {applications.length > 0 && <span className="ml-1 bg-[#E8A838] text-[#1A2332] px-1.5 py-0.5 rounded-full text-xs">{applications.length}</span>}
           </button>
+          <button onClick={() => setTab("dispatchers")} className={`px-4 py-2 rounded-lg text-sm font-medium transition ${tab === "dispatchers" ? "bg-[#1A2332] text-white" : "bg-white text-[#1A2332] hover:bg-gray-100 border border-[#B8D4E3]"}`}>Диспетчеры</button>
           <div className="ml-auto flex gap-2">
             <button onClick={() => handleExport("csv")} className="bg-white text-[#1A2332] px-3 py-2 rounded-lg text-sm hover:bg-gray-100 border border-[#B8D4E3] transition">📥 CSV</button>
             <button onClick={() => handleExport("json")} className="bg-white text-[#1A2332] px-3 py-2 rounded-lg text-sm hover:bg-gray-100 border border-[#B8D4E3] transition">📥 JSON</button>
@@ -463,6 +498,51 @@ export default function AdminPage() {
                 </tbody>
               </table>
               {applications.length === 0 && <div className="text-center py-12 text-[#8B7355]">Новых заявок нет</div>}
+            </div>
+          </>
+        )}
+
+        {/* Dispatchers Tab */}
+        {tab === "dispatchers" && (
+          <>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-[#1A2332]" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>Диспетчеры</h2>
+              <div className="flex gap-2">
+                <input type="tel" placeholder="Телефон диспетчера" id="dispatcherPhone"
+                  className="px-4 py-2 border border-[#B8D4E3] rounded-lg text-sm w-48 focus:outline-none focus:ring-2 focus:ring-[#2D6A8F] bg-white" />
+                <button onClick={() => {
+                  const input = document.getElementById("dispatcherPhone") as HTMLInputElement
+                  if (input.value) { handleSetDispatcher(input.value); input.value = "" }
+                }} className="bg-[#E8A838] text-[#1A2332] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#d49a30] transition">
+                  + Назначить диспетчера
+                </button>
+              </div>
+            </div>
+            <p className="text-sm text-[#8B7355] mb-4">Пользователь должен быть зарегистрирован на сайте (войти хотя бы раз)</p>
+            <div className="bg-white rounded-lg border border-[#B8D4E3] overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-[#F5F0EB]">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Телефон</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Имя</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Роль</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Действия</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#B8D4E3]">
+                  {dispatchers.map((d) => (
+                    <tr key={d.id} className="hover:bg-[#F5F0EB]/50">
+                      <td className="px-4 py-3 text-sm">{d.phone}</td>
+                      <td className="px-4 py-3 text-sm font-medium">{d.name || "—"}</td>
+                      <td className="px-4 py-3"><span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">Диспетчер</span></td>
+                      <td className="px-4 py-3">
+                        <button onClick={() => handleRemoveDispatcher(d.id)} className="text-red-500 hover:text-red-700 text-sm">Снять полномочия</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {dispatchers.length === 0 && <div className="text-center py-12 text-[#8B7355]">Диспетчеров пока нет</div>}
             </div>
           </>
         )}
