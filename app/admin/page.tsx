@@ -32,10 +32,12 @@ type Stats = {
 
 type Driver = {
   id: string
+  userId: string | null
   name: string
   phone: string
   carInfo: string
   isActive: boolean
+  status: string
   createdAt: string
 }
 
@@ -455,6 +457,7 @@ export default function AdminPage() {
                     <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Телефон</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Автомобиль</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Статус</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Пароль</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Действия</th>
                   </tr>
                 </thead>
@@ -465,6 +468,14 @@ export default function AdminPage() {
                       <td className="px-4 py-3 text-sm">{d.phone}</td>
                       <td className="px-4 py-3 text-sm">{d.carInfo}</td>
                       <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${d.isActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>{d.isActive ? "Активен" : "Неактивен"}</span></td>
+                      <td className="px-4 py-3">
+                        {d.userId ? (
+                          <button onClick={() => { setPasswordModalUser({ id: d.userId!, phone: d.phone, name: d.name }); setNewPassword("") }}
+                            className="bg-[#2D6A8F] text-white px-2 py-1 rounded text-xs font-medium hover:bg-[#245a7a]">Пароль</button>
+                        ) : (
+                          <span className="text-xs text-[#8B7355]">Нет аккаунта</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3">
                         <button onClick={() => handleDeleteDriver(d.id)} className="text-red-500 hover:text-red-700 text-sm">Удалить</button>
                       </td>

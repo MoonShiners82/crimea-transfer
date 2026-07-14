@@ -1,23 +1,11 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { requireRole } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions)
-
-    if (!session?.user) {
-      return NextResponse.json({ error: "Необходима авторизация" }, { status: 401 })
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { phone: session.user.phone as string }
-    })
-
-    if (!user || user.role !== "admin") {
-      return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
-    }
+    const { res } = await requireRole("admin")
+    if (res) return res
 
     const { driverId } = await req.json()
 
@@ -37,13 +25,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Заявка уже обработана" }, { status: 400 })
     }
 
-    // Update driver status
     await prisma.driver.update({
       where: { id: driverId },
       data: { status: "approved" }
     })
 
-    // Update user role to driver
     if (driver.userId) {
       await prisma.user.update({
         where: { id: driver.userId },

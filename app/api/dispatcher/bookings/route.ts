@@ -1,24 +1,11 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { requireRole } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
-
-async function checkDispatcher() {
-  const session = await getServerSession(authOptions)
-  if (!session?.user) return { error: "Необходима авторизация", status: 401 }
-
-  const user = await prisma.user.findUnique({
-    where: { phone: session.user.phone as string }
-  })
-
-  if (!user || user.role !== "dispatcher") return { error: "Доступ запрещён", status: 403 }
-  return { user }
-}
 
 export async function GET(req: Request) {
   try {
-    const check = await checkDispatcher()
-    if ("error" in check) return NextResponse.json(check, { status: check.status })
+    const { res } = await requireRole("dispatcher")
+    if (res) return res
 
     const { searchParams } = new URL(req.url)
     const status = searchParams.get("status")

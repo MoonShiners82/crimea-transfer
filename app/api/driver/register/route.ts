@@ -1,26 +1,14 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { requireAuth } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions)
-
-    if (!session?.user) {
-      return NextResponse.json({ error: "Необходима авторизация" }, { status: 401 })
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { phone: session.user.phone as string }
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: "Пользователь не найден" }, { status: 404 })
-    }
+    const { dbUser, res } = await requireAuth()
+    if (res) return res
 
     const existingDriver = await prisma.driver.findUnique({
-      where: { userId: user.id }
+      where: { userId: dbUser.id }
     })
 
     if (existingDriver) {
@@ -35,7 +23,7 @@ export async function POST(req: Request) {
 
     const driver = await prisma.driver.create({
       data: {
-        userId: user.id,
+        userId: dbUser.id,
         name,
         phone,
         carInfo,

@@ -1,17 +1,11 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { requireRole } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-
-    const user = await prisma.user.findUnique({
-      where: { phone: session.user.phone as string }
-    })
-    if (!user || user.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    const { res } = await requireRole("admin")
+    if (res) return res
 
     const dispatchers = await prisma.user.findMany({
       where: { role: "dispatcher" },
@@ -28,18 +22,12 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-
-    const admin = await prisma.user.findUnique({
-      where: { phone: session.user.phone as string }
-    })
-    if (!admin || admin.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    const { res } = await requireRole("admin")
+    if (res) return res
 
     const { phone } = await req.json()
     if (!phone) return NextResponse.json({ error: "Phone required" }, { status: 400 })
 
-    // Normalize phone
     let clean = phone.replace(/\D/g, "")
     if (clean.startsWith("8")) clean = "7" + clean.slice(1)
     if (!clean.startsWith("7")) clean = "7" + clean
@@ -71,13 +59,8 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-
-    const admin = await prisma.user.findUnique({
-      where: { phone: session.user.phone as string }
-    })
-    if (!admin || admin.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    const { res } = await requireRole("admin")
+    if (res) return res
 
     const { searchParams } = new URL(req.url)
     const id = searchParams.get("id")

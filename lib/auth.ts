@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs"
 
 export const authOptions: NextAuthOptions = {
   providers: [
-    // Password login for staff (dispatcher/driver)
+    // Password login (all roles: admin, dispatcher, driver)
     CredentialsProvider({
       name: "Password",
       credentials: {
@@ -19,7 +19,6 @@ export const authOptions: NextAuthOptions = {
         const user = await prisma.user.findUnique({ where: { phone } })
 
         if (!user || !user.passwordHash) return null
-        if (user.role !== "dispatcher" && user.role !== "driver") return null
 
         const valid = await bcrypt.compare(credentials.password, user.passwordHash)
         if (!valid) return null
@@ -27,48 +26,15 @@ export const authOptions: NextAuthOptions = {
         return { id: user.id, phone: user.phone, name: user.name, role: user.role }
       }
     }),
-    // FlashCall login for customers
-    CredentialsProvider({
-      name: "Callback",
-      credentials: {
-        phone: { label: "Phone", type: "tel" },
-        verificationToken: { label: "Verification Token", type: "text" }
-      },
-      async authorize(credentials) {
-        if (!credentials?.phone || !credentials?.verificationToken) return null
-
-        const phone = normalizePhone(credentials.phone)
-        const token = credentials.verificationToken as string
-
-        const verificationToken = await prisma.verificationToken.findUnique({
-          where: { token }
-        })
-
-        if (
-          !verificationToken ||
-          verificationToken.phone !== phone ||
-          verificationToken.isUsed ||
-          verificationToken.expiresAt < new Date()
-        ) {
-          return null
-        }
-
-        await prisma.verificationToken.update({
-          where: { id: verificationToken.id },
-          data: { isUsed: true }
-        })
-
-        let user = await prisma.user.findUnique({ where: { phone } })
-        if (!user) {
-          user = await prisma.user.create({ data: { phone } })
-        }
-
-        return { id: user.id, phone: user.phone, name: user.name, role: user.role }
-      }
-    })
+    // FlashCall — ОТКЛЮЧЁН (проблемы с дозвоном)
+    // CredentialsProvider({
+    //   name: "Callback",
+    //   credentials: { ... },
+    //   async authorize(credentials) { ... }
+    // })
   ],
   session: { strategy: "jwt" },
-  pages: { signIn: '/auth/signin' },
+  pages: { signIn: '/auth/staff-login' },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {

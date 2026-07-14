@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { requireAuth } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 
 export async function GET(
@@ -8,27 +7,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession( authOptions)
-
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: "Необходима авторизация" },
-        { status: 401 }
-      )
-    }
+    const { dbUser, res } = await requireAuth()
+    if (res) return res
 
     const { id } = await params
-
-    const user = await prisma.user.findUnique({
-      where: { phone: session.user.phone as string }
-    })
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "Пользователь не найден" },
-        { status: 404 }
-      )
-    }
 
     const booking = await prisma.booking.findUnique({
       where: { id },
@@ -45,7 +27,7 @@ export async function GET(
       )
     }
 
-    if (booking.userId !== user.id && user.role !== "admin") {
+    if (booking.userId !== dbUser.id && dbUser.role !== "admin") {
       return NextResponse.json(
         { error: "Доступ запрещён" },
         { status: 403 }
@@ -64,28 +46,11 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession( authOptions)
-
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: "Необходима авторизация" },
-        { status: 401 }
-      )
-    }
+    const { dbUser, res } = await requireAuth()
+    if (res) return res
 
     const { id } = await params
     const data = await req.json()
-
-    const user = await prisma.user.findUnique({
-      where: { phone: session.user.phone as string }
-    })
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "Пользователь не найден" },
-        { status: 404 }
-      )
-    }
 
     const booking = await prisma.booking.findUnique({
       where: { id }
@@ -98,7 +63,7 @@ export async function PATCH(
       )
     }
 
-    if (booking.userId !== user.id && user.role !== "admin") {
+    if (booking.userId !== dbUser.id && dbUser.role !== "admin") {
       return NextResponse.json(
         { error: "Доступ запрещён" },
         { status: 403 }
@@ -121,7 +86,7 @@ export async function PATCH(
       }
     }
 
-    if (user.role === "admin") {
+    if (dbUser.role === "admin") {
       if (data.status) updates.status = data.status
       if (data.driverName) updates.driverName = data.driverName
       if (data.driverPhone) updates.driverPhone = data.driverPhone
@@ -149,27 +114,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession( authOptions)
-
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: "Необходима авторизация" },
-        { status: 401 }
-      )
-    }
+    const { dbUser, res } = await requireAuth()
+    if (res) return res
 
     const { id } = await params
-
-    const user = await prisma.user.findUnique({
-      where: { phone: session.user.phone as string }
-    })
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "Пользователь не найден" },
-        { status: 404 }
-      )
-    }
 
     const booking = await prisma.booking.findUnique({
       where: { id }
@@ -182,7 +130,7 @@ export async function DELETE(
       )
     }
 
-    if (booking.userId !== user.id && user.role !== "admin") {
+    if (booking.userId !== dbUser.id && dbUser.role !== "admin") {
       return NextResponse.json(
         { error: "Доступ запрещён" },
         { status: 403 }

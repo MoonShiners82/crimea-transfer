@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { signIn } from "next-auth/react"
-import Link from "next/link"
 
 export default function StaffLoginPage() {
   const router = useRouter()
@@ -103,9 +102,9 @@ export default function StaffLoginPage() {
         </form>
 
         <div className="mt-6 text-center">
-          <Link href="/auth/signin" className="text-sm text-[#2D6A8F] hover:text-[#1A2332]">
-            Вход для клиентов (по звонку)
-          </Link>
+          <p className="text-xs text-[#8B7355]">
+            Авторизация по номеру телефона временно недоступна
+          </p>
         </div>
       </div>
     </div>

@@ -1,23 +1,11 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { requireRole } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
-
-    if (!session?.user) {
-      return NextResponse.json({ error: "Необходима авторизация" }, { status: 401 })
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { phone: session.user.phone as string }
-    })
-
-    if (!user || user.role !== "admin") {
-      return NextResponse.json({ error: "Доступ запрещён" }, { status: 403 })
-    }
+    const { res } = await requireRole("admin")
+    if (res) return res
 
     const now = new Date()
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())

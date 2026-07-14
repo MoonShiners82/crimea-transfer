@@ -1,15 +1,11 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { requireRole } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-
-    const user = await prisma.user.findUnique({ where: { phone: session.user.phone as string } })
-    if (!user || user.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    const { res } = await requireRole("admin")
+    if (res) return res
 
     const { bookingId, priceFinal, driverName, driverPhone, carInfo } = await req.json()
     if (!bookingId) return NextResponse.json({ error: "Booking ID required" }, { status: 400 })

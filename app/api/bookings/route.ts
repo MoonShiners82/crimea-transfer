@@ -1,36 +1,18 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { requireAuth } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 
 export async function GET(req: Request) {
   try {
-    const session = await getServerSession( authOptions)
-
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: "Необходима авторизация" },
-        { status: 401 }
-      )
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { phone: session.user.phone as string }
-    })
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "Пользователь не найден" },
-        { status: 404 }
-      )
-    }
+    const { dbUser, res } = await requireAuth()
+    if (res) return res
 
     const { searchParams } = new URL(req.url)
     const status = searchParams.get("status")
     const limit = parseInt(searchParams.get("limit") || "20")
     const offset = parseInt(searchParams.get("offset") || "0")
 
-    const where = { userId: user.id, ...(status ? { status } : {}) }
+    const where = { userId: dbUser.id, ...(status ? { status } : {}) }
 
     const [bookings, total] = await Promise.all([
       prisma.booking.findMany({
@@ -54,14 +36,8 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession( authOptions)
-
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: "Необходима авторизация" },
-        { status: 401 }
-      )
-    }
+    const { dbUser, res } = await requireAuth()
+    if (res) return res
 
     const data = await req.json()
 
@@ -69,17 +45,6 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "Все поля обязательны" },
         { status: 400 }
-      )
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { phone: session.user.phone as string }
-    })
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "Пользователь не найден" },
-        { status: 404 }
       )
     }
 
@@ -117,7 +82,7 @@ export async function POST(req: Request) {
 
     const booking = await prisma.booking.create({
       data: {
-        userId: user.id,
+        userId: dbUser.id,
         routeId: data.routeId,
         datetime: new Date(data.datetime),
         passengers: data.passengers,
