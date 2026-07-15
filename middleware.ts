@@ -123,6 +123,7 @@ export async function middleware(request: NextRequest) {
   const PUBLIC_API_ROUTES = [
     "/api/auth/login",
     "/api/auth/logout",
+    "/api/auth/refresh",
     "/api/auth/me",
     "/api/calculate-price",
     "/api/routes",

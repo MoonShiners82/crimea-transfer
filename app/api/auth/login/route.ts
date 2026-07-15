@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
-import { signToken, setTokenCookie } from "@/lib/jwt"
+import { signAccessToken, signRefreshToken, setTokenCookies } from "@/lib/jwt"
 
 function normalizePhone(phone: string): string {
   let clean = phone.replace(/\D/g, "")
@@ -30,14 +30,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Неверный телефон или пароль" }, { status: 401 })
     }
 
-    const token = await signToken({
-      id: user.id,
-      phone: user.phone,
-      name: user.name,
-      role: user.role,
-    })
+    const tokenData = { id: user.id, phone: user.phone, name: user.name, role: user.role }
+    const accessToken = await signAccessToken(tokenData)
+    const refreshToken = await signRefreshToken(tokenData)
 
-    await setTokenCookie(token)
+    await setTokenCookies(accessToken, refreshToken)
 
     return NextResponse.json({
       user: { id: user.id, phone: user.phone, name: user.name, role: user.role }

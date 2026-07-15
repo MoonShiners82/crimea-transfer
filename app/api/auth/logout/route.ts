@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
-import { removeTokenCookie } from "@/lib/jwt"
+import { removeTokenCookies } from "@/lib/jwt"
 
 export async function POST() {
-  await removeTokenCookie()
+  await removeTokenCookies()
   return NextResponse.json({ success: true })
 }
