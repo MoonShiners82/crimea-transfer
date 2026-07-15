@@ -7,23 +7,8 @@ const roleRoutes: Record<string, string[]> = {
   driver: ["/driver", "/api/driver"],
 }
 
-const publicRoutes = [
-  "/",
-  "/terms",
-  "/auth",
-  "/api/auth",
-  "/api/calculate-price",
-  "/api/routes",
-  "/_next",
-  "/favicon.ico",
-]
-
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
-
-  if (publicRoutes.some((r) => pathname === r || pathname.startsWith(r + "/"))) {
-    return NextResponse.next()
-  }
 
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
 
@@ -55,5 +40,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/admin/:path*", "/dispatcher/:path*", "/driver/:path*", "/api/admin/:path*", "/api/dispatcher/:path*", "/api/driver/:path*", "/api/bookings/:path*"],
 }
