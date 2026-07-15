@@ -226,14 +226,13 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (authStatus === "authenticated") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchBookings()
       fetchStats()
       fetchDrivers()
       fetchApplications()
       fetchDispatchers()
     }
-  })
+  }, [authStatus])
 
   const handleConfirm = async (e: React.FormEvent) => {
     e.preventDefault()

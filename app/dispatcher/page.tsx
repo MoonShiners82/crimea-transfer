@@ -87,12 +87,11 @@ export default function DispatcherPage() {
 
   useEffect(() => {
     if (authStatus === "authenticated") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchBookings()
       fetchStats()
       fetchDrivers()
     }
-  })
+  }, [authStatus])
 
   const fetchBookings = async () => {
     try {
