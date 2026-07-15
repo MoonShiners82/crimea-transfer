@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { useToast } from "../components/Toast"
 
 type Booking = {
   id: string
@@ -48,6 +49,7 @@ const statusText: Record<string, string> = {
 export default function DriverPage() {
   const { data: session, status: authStatus } = useSession()
   const router = useRouter()
+  const { toast } = useToast()
   const [profile, setProfile] = useState<DriverProfile | null>(null)
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
@@ -111,9 +113,9 @@ export default function DriverPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus })
       })
-      if (res.ok) fetchBookings()
-      else alert("Ошибка")
-    } catch { alert("Ошибка сервера") }
+      if (res.ok) { fetchBookings(); toast("Статус обновлён", "success") }
+      else toast("Ошибка", "error")
+    } catch { toast("Ошибка сервера", "error") }
     finally { setUpdatingId(null) }
   }
 

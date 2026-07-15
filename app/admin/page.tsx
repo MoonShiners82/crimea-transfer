@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { useToast } from "../components/Toast"
 
 type Booking = {
   id: string
@@ -66,6 +67,7 @@ const statusText: Record<string, string> = {
 export default function AdminPage() {
   const { data: session, status: authStatus } = useSession()
   const router = useRouter()
+  const { toast } = useToast()
   const [tab, setTab] = useState<"bookings" | "drivers" | "applications" | "dispatchers">("bookings")
   const [bookings, setBookings] = useState<Booking[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
@@ -150,9 +152,9 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ driverId })
       })
-      if (res.ok) { fetchApplications(); fetchDrivers() }
-      else alert("Ошибка")
-    } catch { alert("Ошибка сервера") }
+      if (res.ok) { fetchApplications(); fetchDrivers(); toast("Водитель одобрен", "success") }
+      else toast("Ошибка одобрения", "error")
+    } catch { toast("Ошибка сервера", "error") }
   }
 
   const handleRejectDriver = async (driverId: string) => {
@@ -163,9 +165,9 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ driverId })
       })
-      if (res.ok) fetchApplications()
-      else alert("Ошибка")
-    } catch { alert("Ошибка сервера") }
+      if (res.ok) { fetchApplications(); toast("Заявка отклонена", "success") }
+      else toast("Ошибка отклонения", "error")
+    } catch { toast("Ошибка сервера", "error") }
   }
 
   const fetchDispatchers = async () => {
@@ -183,21 +185,21 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone })
       })
-      if (res.ok) fetchDispatchers()
+      if (res.ok) { fetchDispatchers(); toast("Диспетчер назначен", "success") }
       else {
         const data = await res.json()
-        alert(data.error || "Ошибка")
+        toast(data.error || "Ошибка", "error")
       }
-    } catch { alert("Ошибка сервера") }
+    } catch { toast("Ошибка сервера", "error") }
   }
 
   const handleRemoveDispatcher = async (userId: string) => {
     if (!confirm("Снять полномочия диспетчера?")) return
     try {
       const res = await fetch(`/api/admin/dispatchers?id=${userId}`, { method: "DELETE" })
-      if (res.ok) fetchDispatchers()
-      else alert("Ошибка")
-    } catch { alert("Ошибка сервера") }
+      if (res.ok) { fetchDispatchers(); toast("Полномочия сняты", "success") }
+      else toast("Ошибка", "error")
+    } catch { toast("Ошибка сервера", "error") }
   }
 
   const handleSetPassword = async (e: React.FormEvent) => {
@@ -210,12 +212,12 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: passwordModalUser.id, password: newPassword })
       })
-      if (res.ok) { setPasswordModalUser(null); setNewPassword(""); alert("Пароль установлен") }
+      if (res.ok) { setPasswordModalUser(null); setNewPassword(""); toast("Пароль установлен", "success") }
       else {
         const data = await res.json()
-        alert(data.error || "Ошибка")
+        toast(data.error || "Ошибка", "error")
       }
-    } catch { alert("Ошибка сервера") }
+    } catch { toast("Ошибка сервера", "error") }
     finally { setSettingPassword(false) }
   }
 
@@ -244,9 +246,9 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bookingId: selectedBooking.id, driverName, driverPhone, carInfo, priceFinal: parseInt(priceFinal) })
       })
-      if (res.ok) { setSelectedBooking(null); fetchBookings(); fetchStats() }
-      else alert("Ошибка подтверждения")
-    } catch { alert("Ошибка сервера") }
+      if (res.ok) { setSelectedBooking(null); fetchBookings(); fetchStats(); toast("Заявка подтверждена", "success") }
+      else toast("Ошибка подтверждения", "error")
+    } catch { toast("Ошибка сервера", "error") }
     finally { setConfirming(false) }
   }
 
@@ -260,9 +262,9 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bookingId: editingBooking.id, priceFinal: parseInt(editPrice), driverName: editDriver, driverPhone: editDriverPhone, carInfo: editCarInfo })
       })
-      if (res.ok) { setEditingBooking(null); fetchBookings() }
-      else alert("Ошибка сохранения")
-    } catch { alert("Ошибка сервера") }
+      if (res.ok) { setEditingBooking(null); fetchBookings(); toast("Сохранено", "success") }
+      else toast("Ошибка сохранения", "error")
+    } catch { toast("Ошибка сервера", "error") }
     finally { setEditing(false) }
   }
 
@@ -276,9 +278,9 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bookingId, status: newStatus })
       })
-      if (res.ok) { fetchBookings(); fetchStats() }
-      else alert("Ошибка")
-    } catch { alert("Ошибка сервера") }
+      if (res.ok) { fetchBookings(); fetchStats(); toast("Статус обновлён", "success") }
+      else toast("Ошибка смены статуса", "error")
+    } catch { toast("Ошибка сервера", "error") }
     finally { setter(null) }
   }
 
@@ -291,9 +293,9 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newDriverName, phone: newDriverPhone, carInfo: newDriverCar })
       })
-      if (res.ok) { setShowDriverModal(false); setNewDriverName(""); setNewDriverPhone(""); setNewDriverCar(""); fetchDrivers() }
-      else alert("Ошибка добавления")
-    } catch { alert("Ошибка сервера") }
+      if (res.ok) { setShowDriverModal(false); setNewDriverName(""); setNewDriverPhone(""); setNewDriverCar(""); fetchDrivers(); toast("Водитель добавлен", "success") }
+      else toast("Ошибка добавления", "error")
+    } catch { toast("Ошибка сервера", "error") }
     finally { setAddingDriver(false) }
   }
 
@@ -301,8 +303,8 @@ export default function AdminPage() {
     if (!confirm("Удалить водителя?")) return
     try {
       const res = await fetch(`/api/admin/drivers?id=${id}`, { method: "DELETE" })
-      if (res.ok) fetchDrivers()
-    } catch { alert("Ошибка") }
+      if (res.ok) { fetchDrivers(); toast("Водитель удалён", "success") }
+    } catch { toast("Ошибка удаления", "error") }
   }
 
   const handleExport = async (format: "csv" | "json") => {

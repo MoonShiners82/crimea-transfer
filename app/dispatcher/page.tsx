@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import { useToast } from "../components/Toast"
 
 type Booking = {
   id: string
@@ -71,6 +72,7 @@ const statusText: Record<string, string> = {
 export default function DispatcherPage() {
   const { data: session, status: authStatus } = useSession()
   const router = useRouter()
+  const { toast } = useToast()
   const [bookings, setBookings] = useState<Booking[]>([])
   const [drivers, setDrivers] = useState<Driver[]>([])
   const [routes, setRoutes] = useState<Route[]>([])
@@ -164,9 +166,9 @@ export default function DispatcherPage() {
           driverId: driver.id
         })
       })
-      if (res.ok) { setSelectedBooking(null); fetchBookings(); fetchStats() }
-      else alert("Ошибка подтверждения")
-    } catch { alert("Ошибка сервера") }
+      if (res.ok) { setSelectedBooking(null); fetchBookings(); fetchStats(); toast("Водитель назначен", "success") }
+      else toast("Ошибка подтверждения", "error")
+    } catch { toast("Ошибка сервера", "error") }
     finally { setConfirming(false) }
   }
 
@@ -198,15 +200,15 @@ export default function DispatcherPage() {
         })
         if (!statusRes.ok) {
           const data = await statusRes.json()
-          alert(data.error || "Ошибка смены статуса")
+          toast(data.error || "Ошибка смены статуса", "error")
           setEditing(false)
           return
         }
       }
 
-      if (editRes.ok) { setEditBooking(null); fetchBookings(); fetchStats() }
-      else alert("Ошибка сохранения")
-    } catch { alert("Ошибка сервера") }
+      if (editRes.ok) { setEditBooking(null); fetchBookings(); fetchStats(); toast("Сохранено", "success") }
+      else toast("Ошибка сохранения", "error")
+    } catch { toast("Ошибка сервера", "error") }
     finally { setEditing(false) }
   }
 
@@ -219,9 +221,9 @@ export default function DispatcherPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bookingId, status: "cancelled" })
       })
-      if (res.ok) { fetchBookings(); fetchStats() }
-      else alert("Ошибка")
-    } catch { alert("Ошибка сервера") }
+      if (res.ok) { fetchBookings(); fetchStats(); toast("Бронирование отменено", "success") }
+      else toast("Ошибка отмены", "error")
+    } catch { toast("Ошибка сервера", "error") }
     finally { setCancellingId(null) }
   }
 
