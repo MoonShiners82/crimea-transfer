@@ -65,13 +65,42 @@ async function verifyJwt(token: string): Promise<JWTPayload | null> {
   }
 }
 
+const API_ROLE_MAP: Record<string, string[]> = {
+  "/api/admin": ["admin"],
+  "/api/dispatcher": ["dispatcher", "admin"],
+  "/api/driver": ["driver"],
+  "/api/bookings": ["user", "admin"],
+}
+
+const PAGE_ROLE_MAP: Record<string, string[]> = {
+  "/admin": ["admin"],
+  "/dispatcher": ["dispatcher"],
+  "/driver/profile": ["driver"],
+  "/driver/register": ["user", "driver", "admin"],
+  "/booking": ["user", "admin"],
+  "/bookings": ["user", "admin"],
+}
+
+function matchRole(pathname: string, roleMap: Record<string, string[]>): string[] | null {
+  for (const [prefix, roles] of Object.entries(roleMap)) {
+    if (pathname === prefix || pathname.startsWith(prefix + "/")) {
+      return roles
+    }
+  }
+  return null
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  if (!pathname.startsWith("/api/")) {
-    return NextResponse.next()
+  if (pathname.startsWith("/api/")) {
+    return handleApiRoute(request, pathname)
   }
 
+  return handlePageRoute(request, pathname)
+}
+
+async function handleApiRoute(request: NextRequest, pathname: string) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
     || request.headers.get("x-real-ip")
     || "unknown"
@@ -98,7 +127,7 @@ export async function middleware(request: NextRequest) {
   response.headers.set("X-RateLimit-Limit", String(config.max))
   response.headers.set("X-RateLimit-Remaining", String(result.remaining))
 
-  if (CSRF_MUTATING_METHODS.has(request.method) && pathname.startsWith("/api/")) {
+  if (CSRF_MUTATING_METHODS.has(request.method)) {
     const origin = request.headers.get("origin")
     const host = request.headers.get("host")
 
@@ -106,16 +135,10 @@ export async function middleware(request: NextRequest) {
       try {
         const originUrl = new URL(origin)
         if (originUrl.host !== host) {
-          return NextResponse.json(
-            { error: "CSRF validation failed" },
-            { status: 403 }
-          )
+          return NextResponse.json({ error: "CSRF validation failed" }, { status: 403 })
         }
       } catch {
-        return NextResponse.json(
-          { error: "CSRF validation failed" },
-          { status: 403 }
-        )
+        return NextResponse.json({ error: "CSRF validation failed" }, { status: 403 })
       }
     }
   }
@@ -130,21 +153,63 @@ export async function middleware(request: NextRequest) {
   ]
 
   const isPublic = PUBLIC_API_ROUTES.some(route => pathname.startsWith(route))
+  if (isPublic) return response
 
-  if (!isPublic && pathname.startsWith("/api/")) {
-    const token = request.cookies.get("token")?.value
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-    const payload = await verifyJwt(token)
-    if (!payload) {
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+  const token = request.cookies.get("token")?.value
+  if (!token) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const payload = await verifyJwt(token)
+  if (!payload) {
+    return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+  }
+
+  const requiredRoles = matchRole(pathname, API_ROLE_MAP)
+  if (requiredRoles) {
+    const userRole = payload.role as string
+    if (!requiredRoles.includes(userRole)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
   }
 
   return response
 }
 
+async function handlePageRoute(request: NextRequest, pathname: string) {
+  const PUBLIC_PAGES = ["/", "/auth/staff-login", "/auth/signin", "/terms"]
+
+  if (PUBLIC_PAGES.includes(pathname)) {
+    return NextResponse.next()
+  }
+
+  const requiredRoles = matchRole(pathname, PAGE_ROLE_MAP)
+  if (!requiredRoles) {
+    return NextResponse.next()
+  }
+
+  const token = request.cookies.get("token")?.value
+  if (!token) {
+    const loginUrl = new URL("/auth/staff-login", request.url)
+    loginUrl.searchParams.set("callbackUrl", pathname)
+    return NextResponse.redirect(loginUrl)
+  }
+
+  const payload = await verifyJwt(token)
+  if (!payload) {
+    const loginUrl = new URL("/auth/staff-login", request.url)
+    loginUrl.searchParams.set("callbackUrl", pathname)
+    return NextResponse.redirect(loginUrl)
+  }
+
+  const userRole = payload.role as string
+  if (!requiredRoles.includes(userRole)) {
+    return NextResponse.redirect(new URL("/", request.url))
+  }
+
+  return NextResponse.next()
+}
+
 export const config = {
-  matcher: ["/api/:path*"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|public/).*)"],
 }
