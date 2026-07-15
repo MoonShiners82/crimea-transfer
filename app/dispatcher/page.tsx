@@ -91,6 +91,7 @@ export default function DispatcherPage() {
   const [editDriverId, setEditDriverId] = useState("")
   const [editPrice, setEditPrice] = useState("")
   const [editCarInfo, setEditCarInfo] = useState("")
+  const [editStatus, setEditStatus] = useState("")
   const [editing, setEditing] = useState(false)
 
   const [cancellingId, setCancellingId] = useState<string | null>(null)
@@ -177,7 +178,7 @@ export default function DispatcherPage() {
     const driver = drivers.find(d => d.id === editDriverId)
 
     try {
-      const res = await fetch("/api/admin/bookings/edit", {
+      const editRes = await fetch("/api/admin/bookings/edit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -188,7 +189,22 @@ export default function DispatcherPage() {
           carInfo: editCarInfo || undefined,
         })
       })
-      if (res.ok) { setEditBooking(null); fetchBookings() }
+
+      if (editStatus !== editBooking.status) {
+        const statusRes = await fetch("/api/admin/bookings/status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bookingId: editBooking.id, status: editStatus })
+        })
+        if (!statusRes.ok) {
+          const data = await statusRes.json()
+          alert(data.error || "Ошибка смены статуса")
+          setEditing(false)
+          return
+        }
+      }
+
+      if (editRes.ok) { setEditBooking(null); fetchBookings(); fetchStats() }
       else alert("Ошибка сохранения")
     } catch { alert("Ошибка сервера") }
     finally { setEditing(false) }
@@ -214,6 +230,7 @@ export default function DispatcherPage() {
     setEditRouteId(b.routeId || "")
     setEditPrice((b.priceFinal || b.priceCalculated).toString())
     setEditCarInfo(b.carInfo || "")
+    setEditStatus(b.status)
     const matchedDriver = drivers.find(d => d.name === b.driverName)
     setEditDriverId(matchedDriver?.id || "")
   }
@@ -377,6 +394,17 @@ export default function DispatcherPage() {
               <p><strong>Пассажиры:</strong> {editBooking.passengers}</p>
             </div>
             <form onSubmit={handleEdit} className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-[#1A2332] mb-1">Статус</label>
+                <select value={editStatus} onChange={e => setEditStatus(e.target.value)}
+                  className="w-full p-2 border border-[#B8D4E3] rounded-lg">
+                  <option value="pending">Ожидает</option>
+                  <option value="confirmed">Подтверждена</option>
+                  <option value="in_progress">В пути</option>
+                  <option value="completed">Завершена</option>
+                  <option value="cancelled">Отменена</option>
+                </select>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-[#1A2332] mb-1">Маршрут</label>
                 <select value={editRouteId} onChange={e => setEditRouteId(e.target.value)}
