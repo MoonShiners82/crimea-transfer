@@ -52,9 +52,10 @@ export default function DriverPage() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [error, setError] = useState("")
 
   useEffect(() => {
-    if (authStatus === "unauthenticated") router.push("/auth/signin")
+    if (authStatus === "unauthenticated") router.push("/auth/staff-login")
   }, [authStatus, router])
 
   useEffect(() => {
@@ -70,17 +71,21 @@ export default function DriverPage() {
         router.push("/driver/register")
         return
       }
-      if (res.ok) {
-        const data = await res.json()
-        setProfile(data)
-        if (data.status === "approved") {
-          fetchBookings()
-        } else {
-          setLoading(false)
-        }
+      if (!res.ok) {
+        setError("Не удалось загрузить профиль водителя")
+        setLoading(false)
+        return
+      }
+      const data = await res.json()
+      setProfile(data)
+      if (data.status === "approved") {
+        fetchBookings()
+      } else {
+        setLoading(false)
       }
     } catch (e) {
       console.error(e)
+      setError("Ошибка загрузки данных")
       setLoading(false)
     }
   }
@@ -88,7 +93,9 @@ export default function DriverPage() {
   const fetchBookings = async () => {
     try {
       const res = await fetch("/api/driver/bookings")
-      if (res.ok) setBookings(await res.json())
+      if (res.ok) {
+        setBookings(await res.json())
+      }
     } catch (e) { console.error(e) }
     finally { setLoading(false) }
   }
@@ -152,19 +159,25 @@ export default function DriverPage() {
           </Link>
         </div>
 
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <p className="text-red-700 text-sm">{error}</p>
+          </div>
+        )}
+
         {/* Driver Info Card */}
         {profile && (
           <div className="bg-white rounded-lg p-4 border border-[#B8D4E3] mb-6 flex items-center gap-4">
             {profile.photoUrl ? (
-              <img src={profile.photoUrl} alt={profile.name} className="w-16 h-16 rounded-full object-cover" />
+              <img src={profile.photoUrl} alt={profile.name || "Водитель"} className="w-16 h-16 rounded-full object-cover" />
             ) : (
               <div className="w-16 h-16 rounded-full bg-[#2D6A8F] text-white flex items-center justify-center text-2xl font-bold">
-                {profile.name.charAt(0)}
+                {(profile.name || "?").charAt(0)}
               </div>
             )}
             <div>
-              <h2 className="font-semibold text-[#1A2332]">{profile.name}</h2>
-              <p className="text-sm text-[#8B7355]">{profile.carInfo}</p>
+              <h2 className="font-semibold text-[#1A2332]">{profile.name || "Без имени"}</h2>
+              <p className="text-sm text-[#8B7355]">{profile.carInfo || ""}</p>
               <p className="text-sm text-[#8B7355]">{profile.phone}</p>
             </div>
           </div>
