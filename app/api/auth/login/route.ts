@@ -34,6 +34,11 @@ export async function POST(req: Request) {
     const accessToken = await signAccessToken(tokenData)
     const refreshToken = await signRefreshToken(tokenData)
 
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    await prisma.refreshToken.create({
+      data: { token: refreshToken, userId: user.id, expiresAt }
+    })
+
     await setTokenCookies(accessToken, refreshToken)
 
     return NextResponse.json({
