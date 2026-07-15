@@ -27,6 +27,7 @@ type Driver = {
   phone: string
   carInfo: string
   isActive: boolean
+  status: string
 }
 
 type Stats = {
@@ -117,7 +118,7 @@ export default function DispatcherPage() {
       const res = await fetch("/api/admin/drivers")
       if (res.ok) {
         const all = await res.json()
-        setDrivers(all.filter((d: Driver) => d.isActive))
+        setDrivers(all.filter((d: Driver) => d.isActive && d.status === "approved"))
       }
     } catch (e) { console.error(e) }
   }

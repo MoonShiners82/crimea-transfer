@@ -210,7 +210,7 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: passwordModalUser.id, password: newPassword })
       })
-      if (res.ok) { setPasswordModalUser(null); setNewPassword("") }
+      if (res.ok) { setPasswordModalUser(null); setNewPassword(""); alert("Пароль установлен") }
       else {
         const data = await res.json()
         alert(data.error || "Ошибка")
