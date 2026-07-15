@@ -2,6 +2,55 @@
 
 import Link from "next/link"
 import { useSession } from "next-auth/react"
+import PriceCalculator from "./components/PriceCalculator"
+
+const faqItems = [
+  {
+    q: "Как забронировать трансфер?",
+    a: "Выберите маршрут, укажите дату, время и количество пассажиров. После отправки заявки диспетчер свяжется с вами для подтверждения."
+  },
+  {
+    q: "Можно ли отменить бронирование?",
+    a: "Да, вы можете отменить бронирование, связавшись с диспетчером по телефону. При отмене менее чем за 24 часа взимается комиссия 50%."
+  },
+  {
+    q: "Какие автомобили используются?",
+    a: "Мы используем современные автомобили класса Comfort и Business: седаны, минивэны и SUV с кондиционером и кондиционером."
+  },
+  {
+    q: "Водитель будет ждать в аэропорту?",
+    a: "Да, водитель встречает вас в зоне прилёта с табличкой. Время ожидания после посадки — до 60 минут бесплатно."
+  },
+  {
+    q: "Как формируется цена?",
+    a: "Цена фиксированная и зависит от маршрута. Доплата за пассажиров сверх 4 человек и за багаж. Ночной тариф (23:00–06:00) — +20%."
+  },
+  {
+    q: "Можно ли оплатить картой?",
+    a: "Да, вы можете оплатить наличными водителю или картой через ссылку, которую пришлёт диспетчер."
+  }
+]
+
+const reviews = [
+  {
+    name: "Алексей М.",
+    route: "Аэропорт Симферополь → Ялта",
+    text: "Отличный сервис! Водитель встретил в аэропорту с табличкой, машина чистая и комфортная. Доехали быстро, несмотря на сезон.",
+    rating: 5
+  },
+  {
+    name: "Елена К.",
+    route: "Севастополь → Аэропорт",
+    text: "Пользуюсь сервисом второй раз. Всё чётко, водители вежливые. Цена как обещали — без доплат. Рекомендую!",
+    rating: 5
+  },
+  {
+    name: "Дмитрий П.",
+    route: "Аэропорт → Алушта",
+    text: "Забронировал для семьи с двумя детьми. Водитель помог с багажом, посадил детей в автокресло. Очень довольны!",
+    rating: 5
+  }
+]
 
 export default function Home() {
   const { data: session } = useSession()
@@ -23,6 +72,19 @@ export default function Home() {
           >
             Забронировать трансфер
           </Link>
+        </div>
+      </section>
+
+      {/* Price Calculator */}
+      <section className="py-16 md:py-24 bg-[#F5F0EB]">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-4" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
+            Узнайте стоимость сразу
+          </h2>
+          <p className="text-[#8B7355] text-center mb-8 max-w-lg mx-auto">
+            Выберите маршрут и рассчитайте цену за 30 секунд
+          </p>
+          <PriceCalculator />
         </div>
       </section>
 
@@ -85,6 +147,53 @@ export default function Home() {
               <h3 className="font-semibold mb-2">Онлайн-бронирование</h3>
               <p className="text-sm text-[#8B7355]">Забронируйте за 2 минуты через сайт</p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Reviews Section */}
+      <section className="py-16 md:py-24">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
+            Отзывы клиентов
+          </h2>
+          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {reviews.map((review, i) => (
+              <div key={i} className="bg-white border border-gray-200 p-6 rounded-lg shadow-sm">
+                <div className="flex items-center gap-1 mb-3">
+                  {Array.from({ length: review.rating }).map((_, j) => (
+                    <span key={j} className="text-[#E8A838]">★</span>
+                  ))}
+                </div>
+                <p className="text-gray-700 mb-4 text-sm leading-relaxed">{review.text}</p>
+                <div className="border-t pt-3">
+                  <p className="font-semibold text-sm">{review.name}</p>
+                  <p className="text-xs text-[#8B7355]">{review.route}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="py-16 md:py-24 bg-white">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
+            Часто задаваемые вопросы
+          </h2>
+          <div className="max-w-3xl mx-auto space-y-4">
+            {faqItems.map((item, i) => (
+              <details key={i} className="group border border-gray-200 rounded-lg">
+                <summary className="flex items-center justify-between p-4 cursor-pointer font-medium text-gray-900 hover:bg-gray-50 transition">
+                  {item.q}
+                  <span className="ml-2 text-gray-400 group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <div className="px-4 pb-4 text-sm text-[#8B7355] leading-relaxed">
+                  {item.a}
+                </div>
+              </details>
+            ))}
           </div>
         </div>
       </section>
