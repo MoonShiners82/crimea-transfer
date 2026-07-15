@@ -14,8 +14,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "userId and password required" }, { status: 400 })
     }
 
-    if (password.length < 6) {
-      return NextResponse.json({ error: "Пароль минимум 6 символов" }, { status: 400 })
+    if (password.length < 8) {
+      return NextResponse.json({ error: "Пароль минимум 8 символов" }, { status: 400 })
+    }
+    if (!/[A-Z]/.test(password)) {
+      return NextResponse.json({ error: "Пароль должен содержать хотя бы одну заглавную букву" }, { status: 400 })
+    }
+    if (!/[a-z]/.test(password)) {
+      return NextResponse.json({ error: "Пароль должен содержать хотя бы одну строчную букву" }, { status: 400 })
+    }
+    if (!/[0-9]/.test(password)) {
+      return NextResponse.json({ error: "Пароль должен содержать хотя бы одну цифру" }, { status: 400 })
     }
 
     const user = await prisma.user.findUnique({ where: { id: userId } })

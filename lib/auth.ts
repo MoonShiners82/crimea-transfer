@@ -26,12 +26,6 @@ export const authOptions: NextAuthOptions = {
         return { id: user.id, phone: user.phone, name: user.name, role: user.role }
       }
     }),
-    // FlashCall — ОТКЛЮЧЁН (проблемы с дозвоном)
-    // CredentialsProvider({
-    //   name: "Callback",
-    //   credentials: { ... },
-    //   async authorize(credentials) { ... }
-    // })
   ],
   session: { strategy: "jwt" },
   pages: { signIn: '/auth/staff-login' },

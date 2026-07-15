@@ -20,8 +20,20 @@ async function main() {
     process.exit(1)
   }
 
-  if (password.length < 6) {
-    console.log("Ошибка: пароль минимум 6 символов")
+  if (password.length < 8) {
+    console.log("Ошибка: пароль минимум 8 символов")
+    process.exit(1)
+  }
+  if (!/[A-Z]/.test(password)) {
+    console.log("Ошибка: пароль должен содержать хотя бы одну заглавную букву")
+    process.exit(1)
+  }
+  if (!/[a-z]/.test(password)) {
+    console.log("Ошибка: пароль должен содержать хотя бы одну строчную букву")
+    process.exit(1)
+  }
+  if (!/[0-9]/.test(password)) {
+    console.log("Ошибка: пароль должен содержать хотя бы одну цифру")
     process.exit(1)
   }
 
