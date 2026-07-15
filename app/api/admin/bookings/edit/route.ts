@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma"
 
 export async function POST(req: Request) {
   try {
-    const { res } = await requireRole("admin")
+    const { res } = await requireRole(["admin", "dispatcher"])
     if (res) return res
 
     const { bookingId, priceFinal, driverName, driverPhone, carInfo } = await req.json()

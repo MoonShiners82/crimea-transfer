@@ -18,7 +18,8 @@ type Booking = {
   createdAt: string
   cancelReason: string | null
   user: { phone: string; name: string | null }
-  route: { fromPoint: string; toPoint: string }
+  route: { id: string; fromPoint: string; toPoint: string }
+  routeId: string
 }
 
 type Driver = {
@@ -26,8 +27,13 @@ type Driver = {
   name: string
   phone: string
   carInfo: string
-  isActive: boolean
-  status: string
+}
+
+type Route = {
+  id: string
+  fromPoint: string
+  toPoint: string
+  priceBase: number
 }
 
 type Stats = {
@@ -67,22 +73,30 @@ export default function DispatcherPage() {
   const router = useRouter()
   const [bookings, setBookings] = useState<Booking[]>([])
   const [drivers, setDrivers] = useState<Driver[]>([])
+  const [routes, setRoutes] = useState<Route[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
 
-  // Confirm modal
+  // Confirm modal (new booking)
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [selectedDriverId, setSelectedDriverId] = useState("")
   const [priceFinal, setPriceFinal] = useState("")
   const [confirming, setConfirming] = useState(false)
 
-  // Loading states
+  // Edit modal
+  const [editBooking, setEditBooking] = useState<Booking | null>(null)
+  const [editRouteId, setEditRouteId] = useState("")
+  const [editDriverId, setEditDriverId] = useState("")
+  const [editPrice, setEditPrice] = useState("")
+  const [editCarInfo, setEditCarInfo] = useState("")
+  const [editing, setEditing] = useState(false)
+
   const [cancellingId, setCancellingId] = useState<string | null>(null)
 
   useEffect(() => {
-    if (authStatus === "unauthenticated") router.push("/auth/signin")
+    if (authStatus === "unauthenticated") router.push("/auth/staff-login")
     else if (authStatus === "authenticated" && session?.user?.role !== "dispatcher") router.push("/")
   }, [authStatus, session, router])
 
@@ -91,6 +105,7 @@ export default function DispatcherPage() {
       fetchBookings()
       fetchStats()
       fetchDrivers()
+      fetchRoutes()
     }
   }, [authStatus])
 
@@ -101,7 +116,7 @@ export default function DispatcherPage() {
       if (searchQuery) params.set("search", searchQuery)
       const res = await fetch(`/api/dispatcher/bookings${params.toString() ? `?${params.toString()}` : ""}`)
       if (res.status === 403) { router.push("/"); return }
-      setBookings(await res.json())
+      if (res.ok) setBookings(await res.json())
     } catch (e) { console.error(e) }
     finally { setLoading(false) }
   }
@@ -115,11 +130,15 @@ export default function DispatcherPage() {
 
   const fetchDrivers = async () => {
     try {
-      const res = await fetch("/api/admin/drivers")
-      if (res.ok) {
-        const all = await res.json()
-        setDrivers(all.filter((d: Driver) => d.isActive && d.status === "approved"))
-      }
+      const res = await fetch("/api/dispatcher/drivers")
+      if (res.ok) setDrivers(await res.json())
+    } catch (e) { console.error(e) }
+  }
+
+  const fetchRoutes = async () => {
+    try {
+      const res = await fetch("/api/routes")
+      if (res.ok) setRoutes(await res.json())
     } catch (e) { console.error(e) }
   }
 
@@ -150,6 +169,31 @@ export default function DispatcherPage() {
     finally { setConfirming(false) }
   }
 
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editBooking) return
+    setEditing(true)
+
+    const driver = drivers.find(d => d.id === editDriverId)
+
+    try {
+      const res = await fetch("/api/admin/bookings/edit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bookingId: editBooking.id,
+          priceFinal: parseInt(editPrice) || undefined,
+          driverName: driver?.name || undefined,
+          driverPhone: driver?.phone || undefined,
+          carInfo: editCarInfo || undefined,
+        })
+      })
+      if (res.ok) { setEditBooking(null); fetchBookings() }
+      else alert("Ошибка сохранения")
+    } catch { alert("Ошибка сервера") }
+    finally { setEditing(false) }
+  }
+
   const handleCancel = async (bookingId: string) => {
     if (!confirm("Отменить бронирование?")) return
     setCancellingId(bookingId)
@@ -165,6 +209,15 @@ export default function DispatcherPage() {
     finally { setCancellingId(null) }
   }
 
+  const openEdit = (b: Booking) => {
+    setEditBooking(b)
+    setEditRouteId(b.routeId || "")
+    setEditPrice((b.priceFinal || b.priceCalculated).toString())
+    setEditCarInfo(b.carInfo || "")
+    const matchedDriver = drivers.find(d => d.name === b.driverName)
+    setEditDriverId(matchedDriver?.id || "")
+  }
+
   if (authStatus === "loading" || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F5F0EB]">
@@ -176,14 +229,12 @@ export default function DispatcherPage() {
   return (
     <div className="min-h-screen bg-[#F5F0EB] py-8">
       <div className="max-w-7xl mx-auto px-4">
-        {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-[#1A2332]" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
             Панель диспетчера
           </h1>
         </div>
 
-        {/* Stats */}
         {stats && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             <div className="bg-white rounded-lg p-4 border border-[#B8D4E3]">
@@ -205,19 +256,18 @@ export default function DispatcherPage() {
           </div>
         )}
 
-        {/* Filters */}
         <div className="flex flex-wrap gap-2 mb-6">
           {statusOptions.map((opt) => (
-            <button key={opt.value} onClick={() => setFilterStatus(opt.value)}
+            <button key={opt.value} onClick={() => { setFilterStatus(opt.value); setLoading(true); fetchBookings() }}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition ${filterStatus === opt.value ? "bg-[#E8A838] text-[#1A2332]" : "bg-white text-[#1A2332] hover:bg-gray-100 border border-[#B8D4E3]"}`}>
               {opt.label}
             </button>
           ))}
           <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { setLoading(true); fetchBookings() } }}
             placeholder="Поиск по телефону, имени, маршруту..." className="ml-auto px-4 py-2 border border-[#B8D4E3] rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-[#2D6A8F] bg-white" />
         </div>
 
-        {/* Bookings */}
         <div className="bg-white rounded-lg border border-[#B8D4E3] overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -256,6 +306,10 @@ export default function DispatcherPage() {
                             className="bg-[#E8A838] text-[#1A2332] px-2 py-1 rounded text-xs font-medium hover:bg-[#d49a30]">Назначить</button>
                         )}
                         {(b.status === "pending" || b.status === "confirmed") && (
+                          <button onClick={() => openEdit(b)}
+                            className="bg-[#2D6A8F] text-white px-2 py-1 rounded text-xs font-medium hover:bg-[#245a7a]">Изменить</button>
+                        )}
+                        {(b.status === "pending" || b.status === "confirmed") && (
                           <button onClick={() => handleCancel(b.id)} disabled={cancellingId === b.id}
                             className="bg-red-500 text-white px-2 py-1 rounded text-xs font-medium hover:bg-red-600 disabled:opacity-50">
                             {cancellingId === b.id ? "..." : "Отмена"}
@@ -272,7 +326,7 @@ export default function DispatcherPage() {
         </div>
       </div>
 
-      {/* Confirm Modal */}
+      {/* Confirm Modal (new booking) */}
       {selectedBooking && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setSelectedBooking(null)}>
           <div className="bg-white rounded-lg max-w-md w-full p-6 border border-[#B8D4E3]" onClick={e => e.stopPropagation()}>
@@ -295,6 +349,7 @@ export default function DispatcherPage() {
                     <option key={d.id} value={d.id}>{d.name} — {d.carInfo}</option>
                   ))}
                 </select>
+                {drivers.length === 0 && <p className="text-xs text-red-500 mt-1">Нет доступных водителей</p>}
               </div>
               <input type="number" placeholder="Итоговая цена (руб)" value={priceFinal} onChange={e => setPriceFinal(e.target.value)}
                 className="w-full p-2 border border-[#B8D4E3] rounded-lg" required />
@@ -303,6 +358,65 @@ export default function DispatcherPage() {
                   {confirming ? "Отправка..." : "Назначить"}
                 </button>
                 <button type="button" onClick={() => setSelectedBooking(null)} className="flex-1 bg-gray-200 p-2 rounded-lg font-semibold hover:bg-gray-300">Отмена</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {editBooking && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setEditBooking(null)}>
+          <div className="bg-white rounded-lg max-w-md w-full p-6 border border-[#B8D4E3]" onClick={e => e.stopPropagation()}>
+            <h2 className="text-xl font-bold mb-4 text-[#1A2332]" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
+              Редактирование заявки
+            </h2>
+            <div className="bg-[#F5F0EB] p-3 rounded-lg mb-4 text-sm space-y-1">
+              <p><strong>Клиент:</strong> {editBooking.user.name && `${editBooking.user.name} — `}{editBooking.user.phone}</p>
+              <p><strong>Дата:</strong> {new Date(editBooking.datetime).toLocaleString("ru")}</p>
+              <p><strong>Пассажиры:</strong> {editBooking.passengers}</p>
+            </div>
+            <form onSubmit={handleEdit} className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-[#1A2332] mb-1">Маршрут</label>
+                <select value={editRouteId} onChange={e => setEditRouteId(e.target.value)}
+                  className="w-full p-2 border border-[#B8D4E3] rounded-lg">
+                  <option value="">Без изменений</option>
+                  {routes.map(r => (
+                    <option key={r.id} value={r.id}>{r.fromPoint} → {r.toPoint} ({r.priceBase} ₽)</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#1A2332] mb-1">Водитель</label>
+                <select value={editDriverId} onChange={e => {
+                  setEditDriverId(e.target.value)
+                  const d = drivers.find(dr => dr.id === e.target.value)
+                  if (d) setEditCarInfo(d.carInfo)
+                }}
+                  className="w-full p-2 border border-[#B8D4E3] rounded-lg">
+                  <option value="">Без изменений</option>
+                  {drivers.map(d => (
+                    <option key={d.id} value={d.id}>{d.name} — {d.carInfo}</option>
+                  ))}
+                </select>
+                {drivers.length === 0 && <p className="text-xs text-red-500 mt-1">Нет доступных водителей</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#1A2332] mb-1">Автомобиль</label>
+                <input type="text" value={editCarInfo} onChange={e => setEditCarInfo(e.target.value)}
+                  placeholder="Марка, модель, номер" className="w-full p-2 border border-[#B8D4E3] rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#1A2332] mb-1">Цена (руб)</label>
+                <input type="number" value={editPrice} onChange={e => setEditPrice(e.target.value)}
+                  className="w-full p-2 border border-[#B8D4E3] rounded-lg" />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button type="submit" disabled={editing} className="flex-1 bg-[#E8A838] text-[#1A2332] p-2 rounded-lg font-semibold hover:bg-[#d49a30] disabled:opacity-50">
+                  {editing ? "Сохранение..." : "Сохранить"}
+                </button>
+                <button type="button" onClick={() => setEditBooking(null)} className="flex-1 bg-gray-200 p-2 rounded-lg font-semibold hover:bg-gray-300">Отмена</button>
               </div>
             </form>
           </div>
