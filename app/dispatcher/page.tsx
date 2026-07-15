@@ -1,9 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useToast } from "../components/Toast"
+import { useAuth } from "@/lib/useAuth"
 
 type Booking = {
   id: string
@@ -70,7 +70,7 @@ const statusText: Record<string, string> = {
 }
 
 export default function DispatcherPage() {
-  const { data: session, status: authStatus } = useSession()
+  const { user, status: authStatus } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
   const [bookings, setBookings] = useState<Booking[]>([])
@@ -100,8 +100,8 @@ export default function DispatcherPage() {
 
   useEffect(() => {
     if (authStatus === "unauthenticated") router.push("/auth/staff-login")
-    else if (authStatus === "authenticated" && session?.user?.role !== "dispatcher") router.push("/")
-  }, [authStatus, session, router])
+    else if (authStatus === "authenticated" && user?.role !== "dispatcher") router.push("/")
+  }, [authStatus, user, router])
 
   useEffect(() => {
     if (authStatus === "authenticated") {

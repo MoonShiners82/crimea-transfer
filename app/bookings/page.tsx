@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/lib/useAuth"
 
 interface Booking {
   id: string
@@ -39,7 +39,7 @@ const baggageLabels: Record<string, string> = {
 }
 
 export default function BookingsPage() {
-  const { status: sessionStatus } = useSession()
+  const { status: sessionStatus } = useAuth()
   const router = useRouter()
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)

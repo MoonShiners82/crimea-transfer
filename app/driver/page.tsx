@@ -1,10 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useToast } from "../components/Toast"
+import { useAuth } from "@/lib/useAuth"
 
 type Booking = {
   id: string
@@ -47,7 +47,7 @@ const statusText: Record<string, string> = {
 }
 
 export default function DriverPage() {
-  const { data: session, status: authStatus } = useSession()
+  const { user, status: authStatus } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
   const [profile, setProfile] = useState<DriverProfile | null>(null)

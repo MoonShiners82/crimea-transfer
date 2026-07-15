@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/lib/useAuth"
 
 type DriverProfile = {
   id: string
@@ -14,7 +14,7 @@ type DriverProfile = {
 }
 
 export default function DriverProfilePage() {
-  const { data: session, status: authStatus } = useSession()
+  const { user, status: authStatus } = useAuth()
   const router = useRouter()
   const [profile, setProfile] = useState<DriverProfile | null>(null)
   const [name, setName] = useState("")

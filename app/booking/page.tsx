@@ -1,8 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/lib/useAuth"
 
 type Route = {
   id: string
@@ -22,7 +22,7 @@ const baggageOptions = [
 ]
 
 export default function BookingPage() {
-  const { status } = useSession()
+  const { status } = useAuth()
   const router = useRouter()
   const [routes, setRoutes] = useState<Route[]>([])
   const [routeId, setRouteId] = useState("")

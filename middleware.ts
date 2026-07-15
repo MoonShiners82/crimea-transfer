@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+import { jwtVerify, type JWTPayload } from "jose"
+
+const jwtSecret = new TextEncoder().encode(process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET)
 
 const store = new Map<string, { count: number; resetAt: number }>()
 let lastCleanup = Date.now()
@@ -53,7 +56,16 @@ function getRateLimitConfig(pathname: string) {
 
 const CSRF_MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"])
 
-export function middleware(request: NextRequest) {
+async function verifyJwt(token: string): Promise<JWTPayload | null> {
+  try {
+    const { payload } = await jwtVerify(token, jwtSecret, { issuer: "crimea-transfer" })
+    return payload
+  } catch {
+    return null
+  }
+}
+
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   if (!pathname.startsWith("/api/")) {
@@ -105,6 +117,27 @@ export function middleware(request: NextRequest) {
           { status: 403 }
         )
       }
+    }
+  }
+
+  const PUBLIC_API_ROUTES = [
+    "/api/auth/login",
+    "/api/auth/logout",
+    "/api/auth/me",
+    "/api/calculate-price",
+    "/api/routes",
+  ]
+
+  const isPublic = PUBLIC_API_ROUTES.some(route => pathname.startsWith(route))
+
+  if (!isPublic && pathname.startsWith("/api/")) {
+    const token = request.cookies.get("token")?.value
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    const payload = await verifyJwt(token)
+    if (!payload) {
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
     }
   }
 

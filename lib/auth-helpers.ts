@@ -1,6 +1,5 @@
-import { getServerSession } from "next-auth"
 import { NextResponse } from "next/server"
-import { authOptions } from "./auth"
+import { getCurrentUser, type TokenPayload } from "./jwt"
 import { prisma } from "./prisma"
 import type { User } from "@prisma/client"
 
@@ -26,18 +25,21 @@ interface AuthError {
 type Result = AuthResult | AuthError
 
 export async function requireAuth(): Promise<Result> {
-  const session = await getServerSession(authOptions)
-  if (!session?.user) {
+  const token = await getCurrentUser()
+  if (!token) {
     return { user: null, dbUser: null, res: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) }
   }
 
-  const u = session.user as SessionUser
-  const dbUser = await prisma.user.findUnique({ where: { phone: u.phone } })
+  const dbUser = await prisma.user.findUnique({ where: { phone: token.phone } })
   if (!dbUser) {
     return { user: null, dbUser: null, res: NextResponse.json({ error: "User not found" }, { status: 401 }) }
   }
 
-  return { user: u, dbUser, res: null }
+  return {
+    user: { id: token.id, phone: token.phone, name: token.name, role: token.role },
+    dbUser,
+    res: null
+  }
 }
 
 export async function requireRole(roles: string | string[]): Promise<Result> {

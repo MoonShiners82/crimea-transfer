@@ -1,10 +1,10 @@
 "use client"
 
 import Link from "next/link"
-import { useSession, signOut } from "next-auth/react"
+import { useAuth } from "@/lib/useAuth"
 
 export default function Navigation() {
-  const { data: session } = useSession()
+  const { user, signOut } = useAuth()
 
   return (
     <nav className="bg-[#1A2332] text-white">
@@ -21,7 +21,7 @@ export default function Navigation() {
             >
               Оферта
             </Link>
-            {session?.user ? (
+            {user ? (
               <>
                 <Link
                   href="/booking"
@@ -35,7 +35,7 @@ export default function Navigation() {
                 >
                   Мои бронирования
                 </Link>
-                {session.user.role === "admin" && (
+                {user.role === "admin" && (
                   <Link
                     href="/admin"
                     className="text-white/80 hover:text-white transition"
@@ -43,7 +43,7 @@ export default function Navigation() {
                     Админка
                   </Link>
                 )}
-                {session.user.role === "dispatcher" && (
+                {user.role === "dispatcher" && (
                   <Link
                     href="/dispatcher"
                     className="text-white/80 hover:text-white transition"
@@ -51,7 +51,7 @@ export default function Navigation() {
                     Диспетчер
                   </Link>
                 )}
-                {session.user.role === "driver" && (
+                {user.role === "driver" && (
                   <Link
                     href="/driver"
                     className="text-white/80 hover:text-white transition"
@@ -59,7 +59,7 @@ export default function Navigation() {
                     Водитель
                   </Link>
                 )}
-                {session.user.role === "user" && (
+                {user.role === "user" && (
                   <Link
                     href="/driver/register"
                     className="text-[#E8A838] hover:text-[#d49a30] transition text-sm"
@@ -69,10 +69,10 @@ export default function Navigation() {
                 )}
                 <div className="flex items-center gap-3 ml-4 pl-4 border-l border-white/20">
                   <span className="text-sm text-white/60">
-                    {session.user.phone}
+                    {user.phone}
                   </span>
                   <button
-                    onClick={() => signOut({ callbackUrl: "/" })}
+                    onClick={signOut}
                     className="text-sm text-[#E8A838] hover:text-[#d49a30] transition"
                   >
                     Выйти

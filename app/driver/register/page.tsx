@@ -1,11 +1,11 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/lib/useAuth"
 
 export default function DriverRegisterPage() {
-  const { data: session, status: authStatus } = useSession()
+  const { user, status: authStatus } = useAuth()
   const router = useRouter()
   const [name, setName] = useState("")
   const [phone, setPhone] = useState("")
@@ -16,9 +16,9 @@ export default function DriverRegisterPage() {
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (authStatus === "unauthenticated") router.push("/auth/signin")
-    if (session?.user?.phone) setPhone(session.user.phone as string)
-  }, [authStatus, session, router])
+    if (authStatus === "unauthenticated") router.push("/auth/staff-login")
+    if (user?.phone) setPhone(user.phone)
+  }, [authStatus, user, router])
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]

@@ -1,10 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useToast } from "../components/Toast"
+import { useAuth } from "@/lib/useAuth"
 
 type Booking = {
   id: string
@@ -65,7 +65,7 @@ const statusText: Record<string, string> = {
 }
 
 export default function AdminPage() {
-  const { data: session, status: authStatus } = useSession()
+  const { user, status: authStatus } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
   const [tab, setTab] = useState<"bookings" | "drivers" | "applications" | "dispatchers">("bookings")
@@ -222,9 +222,9 @@ export default function AdminPage() {
   }
 
   useEffect(() => {
-    if (authStatus === "unauthenticated") router.push("/auth/signin")
-    else if (authStatus === "authenticated" && session?.user?.role !== "admin") router.push("/")
-  }, [authStatus, session, router])
+    if (authStatus === "unauthenticated") router.push("/auth/staff-login")
+    else if (authStatus === "authenticated" && user?.role !== "admin") router.push("/")
+  }, [authStatus, user, router])
 
   useEffect(() => {
     if (authStatus === "authenticated") {

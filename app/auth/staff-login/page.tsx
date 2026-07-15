@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { signIn } from "next-auth/react"
 
 export default function StaffLoginPage() {
   const router = useRouter()
@@ -17,31 +16,29 @@ export default function StaffLoginPage() {
     setLoading(true)
 
     try {
-      const result = await signIn("credentials", {
-        phone,
-        password,
-        redirect: false,
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, password })
       })
 
-      if (result?.error) {
-        setError("Неверный телефон или пароль")
+      const data = await res.json()
+
+      if (!res.ok) {
+        setError(data.error || "Неверный телефон или пароль")
         return
       }
 
-      // Redirect based on role — we need to fetch session
-      const res = await fetch("/api/auth/session")
-      const session = await res.json()
-
-      if (session?.user?.role === "dispatcher") {
+      const role = data.user?.role
+      if (role === "dispatcher") {
         router.push("/dispatcher")
-      } else if (session?.user?.role === "driver") {
+      } else if (role === "driver") {
         router.push("/driver")
-      } else if (session?.user?.role === "admin") {
+      } else if (role === "admin") {
         router.push("/admin")
       } else {
         router.push("/")
       }
-      router.refresh()
     } catch {
       setError("Ошибка сервера")
     } finally {
