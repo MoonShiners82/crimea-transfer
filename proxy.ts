@@ -90,7 +90,7 @@ function matchRole(pathname: string, roleMap: Record<string, string[]>): string[
   return null
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   if (pathname.startsWith("/api/")) {
@@ -146,6 +146,7 @@ async function handleApiRoute(request: NextRequest, pathname: string) {
     "/api/auth/me",
     "/api/calculate-price",
     "/api/routes",
+    "/api/reviews",
   ]
 
   const isPublic = PUBLIC_API_ROUTES.some(route => pathname.startsWith(route))
