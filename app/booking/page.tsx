@@ -14,6 +14,17 @@ type Route = {
   pricePerBaggage: number
 }
 
+type CarClass = {
+  id: string
+  name: string
+  coefficient: number
+}
+
+const defaultCarClasses: CarClass[] = [
+  { id: "economy", name: "Эконом", coefficient: 0.8 },
+  { id: "comfort", name: "Комфорт", coefficient: 1.0 },
+]
+
 const baggageOptions = [
   { value: "none", label: "Без багажа", icon: "🧳" },
   { value: "1", label: "1 чемодан", icon: "🧳" },
@@ -25,10 +36,13 @@ export default function BookingPage() {
   const { status } = useAuth()
   const router = useRouter()
   const [routes, setRoutes] = useState<Route[]>([])
+  const [carClasses, setCarClasses] = useState<CarClass[]>(defaultCarClasses)
+  const [pricePerKm, setPricePerKm] = useState(25)
   const [routeId, setRouteId] = useState("")
   const [datetime, setDatetime] = useState("")
   const [passengers, setPassengers] = useState(1)
   const [baggage, setBaggage] = useState("none")
+  const [carClass, setCarClass] = useState("comfort")
   const [price, setPrice] = useState(0)
   const [loading, setLoading] = useState(false)
   const [routesLoading, setRoutesLoading] = useState(true)
@@ -58,16 +72,26 @@ export default function BookingPage() {
   }, [])
 
   useEffect(() => {
+    fetch("/api/settings")
+      .then(res => res.json())
+      .then(data => {
+        if (data.pricePerKm) setPricePerKm(data.pricePerKm)
+        if (data.carClasses?.length) setCarClasses(data.carClasses)
+      })
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
     if (routeId) {
       fetch("/api/calculate-price", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ routeId, passengers, baggage, datetime, notes: notes || undefined })
+        body: JSON.stringify({ routeId, passengers, baggage, datetime, carClass })
       })
         .then(res => res.json())
         .then(data => setPrice(data.price || 0))
     }
-  }, [routeId, passengers, baggage, datetime])
+  }, [routeId, passengers, baggage, datetime, carClass])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -83,6 +107,7 @@ export default function BookingPage() {
           datetime,
           passengers,
           baggageType: baggage,
+          carClass,
           priceCalculated: price
         })
       })
@@ -200,6 +225,29 @@ export default function BookingPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
+                Класс автомобиля
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {carClasses.map(cc => (
+                  <button
+                    key={cc.id}
+                    type="button"
+                    onClick={() => setCarClass(cc.id)}
+                    className={`p-3 rounded-lg border-2 text-center transition ${
+                      carClass === cc.id
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <p className="text-sm font-medium">{cc.name}</p>
+                    <p className="text-xs text-gray-500">{cc.coefficient}×</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Багаж
               </label>
               <div className="grid grid-cols-2 gap-2">
@@ -232,6 +280,9 @@ export default function BookingPage() {
                     <p className="text-sm text-gray-500">{selectedRoute.distanceKm} км</p>
                     <p className="text-sm text-gray-500">~{selectedRoute.durationMin} мин</p>
                   </div>
+                </div>
+                <div className="text-xs text-gray-500 mb-2">
+                  {carClasses.find(c => c.id === carClass)?.name || "Комфорт"} · {pricePerKm} ₽/км × {carClasses.find(c => c.id === carClass)?.coefficient || 1}
                 </div>
                 <div className="border-t pt-2 mt-2">
                   <div className="flex justify-between items-center">

@@ -17,6 +17,7 @@ interface Booking {
   driverName: string | null
   driverPhone: string | null
   carInfo: string | null
+  carClass: string | null
   createdAt: string
   route: {
     fromPoint: string
@@ -206,10 +207,14 @@ export default function BookingsPage() {
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                     <div>
                       <p className="text-gray-500">Пассажиры</p>
                       <p className="font-medium">{booking.passengers}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Класс</p>
+                      <p className="font-medium">{booking.carClass || "—"}</p>
                     </div>
                     <div>
                       <p className="text-gray-500">Багаж</p>

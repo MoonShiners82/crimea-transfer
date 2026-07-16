@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma"
 
 export async function POST(req: Request) {
   try {
-    const { routeId, passengers, baggage, datetime } = await req.json()
+    const { routeId, passengers, baggage, datetime, carClass } = await req.json()
 
     if (!routeId) {
       return NextResponse.json({ price: 0 })
@@ -17,23 +17,40 @@ export async function POST(req: Request) {
       return NextResponse.json({ price: 0 })
     }
 
-    let price = route.priceBase
+    const settings = await prisma.setting.findMany()
+    const map: Record<string, string> = {}
+    for (const s of settings) map[s.key] = s.value
 
-    // Доплата за пассажиров сверх 4
+    const pricePerKm = parseInt(map.pricePerKm || "25")
+    const carClasses = JSON.parse(map.carClasses || "[]")
+    const extraPassengerPrice = parseInt(map.extraPassengerPrice || "300")
+    const nightCoefficient = parseFloat(map.nightCoefficient || "1.2")
+    const nightHoursStart = parseInt(map.nightHoursStart || "23")
+    const nightHoursEnd = parseInt(map.nightHoursEnd || "6")
+
+    const selectedClass = carClasses.find((c: { id: string }) => c.id === carClass)
+    const coefficient = selectedClass?.coefficient || 1.0
+
+    let price = Math.round(route.distanceKm * pricePerKm * coefficient)
+
     if (passengers > 4) {
-      price += (passengers - 4) * 300
+      price += (passengers - 4) * extraPassengerPrice
     }
 
-    // Доплата за багаж
     if (baggage === "1") price += route.pricePerBaggage
     if (baggage === "2plus") price += route.pricePerBaggage * 2
     if (baggage === "oversized") price += route.pricePerBaggage * 3
 
-    // Ночной коэффициент (23:00–06:00)
     if (datetime) {
       const hour = new Date(datetime).getHours()
-      if (hour >= 23 || hour < 6) {
-        price = Math.round(price * 1.2)
+      if (nightHoursStart > nightHoursEnd) {
+        if (hour >= nightHoursStart || hour < nightHoursEnd) {
+          price = Math.round(price * nightCoefficient)
+        }
+      } else {
+        if (hour >= nightHoursStart && hour < nightHoursEnd) {
+          price = Math.round(price * nightCoefficient)
+        }
       }
     }
 

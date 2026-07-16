@@ -55,6 +55,7 @@ model Booking {
   driverPhone     String?
   carInfo         String?
   notes           String?
+  carClass        String?
   createdAt       DateTime  @default(now())
   confirmedAt     DateTime?
   cancelReason    String?
@@ -132,4 +133,10 @@ model Review {
 
   @@index([isActive])
   @@index([createdAt])
+}
+
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }

@@ -18,6 +18,7 @@ type Booking = {
   driverName: string | null
   driverPhone: string | null
   carInfo: string | null
+  carClass: string | null
   notes: string | null
   createdAt: string
   cancelReason: string | null
@@ -380,6 +381,8 @@ export default function AdminPage() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <h1 className="text-3xl font-bold text-[#1A2332]" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>Админ-панель</h1>
           <div className="flex gap-2">
+            <Link href="/admin/settings" className="bg-white text-[#1A2332] px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-100 border border-[#B8D4E3] transition">Настройки цен</Link>
+            <Link href="/admin/routes" className="bg-white text-[#1A2332] px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-100 border border-[#B8D4E3] transition">Маршруты</Link>
             <button onClick={() => setShowDashboard(!showDashboard)} className={`px-4 py-2 rounded-lg text-sm font-medium transition ${showDashboard ? "bg-[#2D6A8F] text-white" : "bg-white text-[#1A2332] hover:bg-gray-100 border border-[#B8D4E3]"}`}>
               {showDashboard ? "Скрыть статистику" : "Показать статистику"}
             </button>
@@ -446,7 +449,7 @@ export default function AdminPage() {
                 <table className="w-full">
                   <thead className="bg-[#F5F0EB]">
                     <tr>
-                      {["ID", "Дата", "Маршрут", "Клиент", "Водитель", "Пассажиры", "Цена", "Статус", "Действия"].map(h => (
+                      {["ID", "Дата", "Маршрут", "Клиент", "Водитель", "Пассажиры", "Класс", "Цена", "Статус", "Действия"].map(h => (
                         <th key={h} className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">{h}</th>
                       ))}
                     </tr>
@@ -465,6 +468,7 @@ export default function AdminPage() {
                           {b.driverName ? <div><div className="font-medium">{b.driverName}</div>{b.driverPhone && <div className="text-[#8B7355] text-xs">{b.driverPhone}</div>}</div> : <span className="text-[#B8D4E3]">—</span>}
                         </td>
                         <td className="px-4 py-3 text-sm">{b.passengers} чел.</td>
+                        <td className="px-4 py-3 text-sm text-[#8B7355]">{b.carClass || "—"}</td>
                         <td className="px-4 py-3 text-sm font-medium">{b.priceFinal || b.priceCalculated} ₽</td>
                         <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[b.status]}`}>{statusText[b.status]}</span></td>
                         <td className="px-4 py-3">

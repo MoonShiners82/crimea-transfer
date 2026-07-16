@@ -12,26 +12,52 @@ type Route = {
   priceBase: number
 }
 
+type CarClass = {
+  id: string
+  name: string
+  coefficient: number
+}
+
+const defaultCarClasses: CarClass[] = [
+  { id: "economy", name: "Эконом", coefficient: 0.8 },
+  { id: "comfort", name: "Комфорт", coefficient: 1.0 },
+]
+
 export default function PriceCalculator() {
   const [routes, setRoutes] = useState<Route[]>([])
+  const [carClasses, setCarClasses] = useState<CarClass[]>(defaultCarClasses)
+  const [pricePerKm, setPricePerKm] = useState(25)
   const [routeId, setRouteId] = useState("")
   const [passengers, setPassengers] = useState(1)
+  const [carClass, setCarClass] = useState("comfort")
   const [loading, setLoading] = useState(true)
+  const [price, setPrice] = useState(0)
 
   useEffect(() => {
-    fetch("/api/routes")
-      .then(res => res.json())
-      .then(data => {
-        setRoutes(data)
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
+    Promise.all([
+      fetch("/api/routes").then(r => r.json()),
+      fetch("/api/settings").then(r => r.json()),
+    ]).then(([routesData, settings]) => {
+      setRoutes(routesData)
+      if (settings.pricePerKm) setPricePerKm(settings.pricePerKm)
+      if (settings.carClasses?.length) setCarClasses(settings.carClasses)
+      setLoading(false)
+    }).catch(() => setLoading(false))
   }, [])
 
   const selectedRoute = routes.find(r => r.id === routeId)
-  const price = selectedRoute
-    ? selectedRoute.priceBase + (passengers > 4 ? (passengers - 4) * 300 : 0)
-    : 0
+  const selectedClass = carClasses.find(c => c.id === carClass)
+  const coefficient = selectedClass?.coefficient || 1.0
+
+  useEffect(() => {
+    if (selectedRoute) {
+      let p = Math.round(selectedRoute.distanceKm * pricePerKm * coefficient)
+      if (passengers > 4) p += (passengers - 4) * 300
+      setPrice(p)
+    } else {
+      setPrice(0)
+    }
+  }, [selectedRoute, passengers, coefficient, pricePerKm])
 
   if (loading) {
     return (
@@ -69,6 +95,27 @@ export default function PriceCalculator() {
         </div>
 
         <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Класс автомобиля</label>
+          <div className="grid grid-cols-3 gap-2">
+            {carClasses.map(cc => (
+              <button
+                key={cc.id}
+                type="button"
+                onClick={() => setCarClass(cc.id)}
+                className={`p-2 rounded-lg border-2 text-center transition ${
+                  carClass === cc.id
+                    ? "border-[#2D6A8F] bg-blue-50"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <p className="text-sm font-medium">{cc.name}</p>
+                <p className="text-xs text-gray-500">{cc.coefficient}×</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Пассажиры</label>
           <div className="flex items-center gap-3">
             <button
@@ -87,6 +134,11 @@ export default function PriceCalculator() {
               +
             </button>
           </div>
+          {passengers > 4 && (
+            <p className="text-xs text-amber-600 mt-1">
+              +{(passengers - 4) * 300}₽ за доп. пассажиров
+            </p>
+          )}
         </div>
 
         {selectedRoute && (
@@ -95,6 +147,7 @@ export default function PriceCalculator() {
               <div>
                 <p className="text-sm text-[#8B7355]">{selectedRoute.fromPoint} → {selectedRoute.toPoint}</p>
                 <p className="text-xs text-[#8B7355]">{selectedRoute.distanceKm} км · ~{selectedRoute.durationMin} мин</p>
+                <p className="text-xs text-[#8B7355]">{selectedClass?.name || "Комфорт"} · {pricePerKm} ₽/км × {coefficient}</p>
               </div>
               <div className="text-right">
                 <p className="text-2xl font-bold text-[#2D6A8F]">{price} ₽</p>

@@ -146,6 +146,7 @@ async function handleApiRoute(request: NextRequest, pathname: string) {
     "/api/auth/me",
     "/api/calculate-price",
     "/api/routes",
+    "/api/settings",
     "/api/reviews",
   ]
 

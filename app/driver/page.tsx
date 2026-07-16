@@ -18,6 +18,7 @@ type Booking = {
   driverName: string | null
   driverPhone: string | null
   carInfo: string | null
+  carClass: string | null
   cancelReason: string | null
   user: { phone: string; name: string | null }
   route: { fromPoint: string; toPoint: string; distanceKm: number; durationMin: number }
@@ -225,12 +226,12 @@ export default function DriverPage() {
                     <span className="ml-1 font-medium">{b.passengers} чел.</span>
                   </div>
                   <div>
-                    <span className="text-[#8B7355]">Расстояние:</span>
-                    <span className="ml-1 font-medium">{b.route.distanceKm} км</span>
+                    <span className="text-[#8B7355]">Класс:</span>
+                    <span className="ml-1 font-medium">{b.carClass || "—"}</span>
                   </div>
                   <div>
-                    <span className="text-[#8B7355]">Время:</span>
-                    <span className="ml-1 font-medium">{b.route.durationMin} мин</span>
+                    <span className="text-[#8B7355]">Расстояние:</span>
+                    <span className="ml-1 font-medium">{b.route.distanceKm} км</span>
                   </div>
                   <div>
                     <span className="text-[#8B7355]">Цена:</span>

@@ -17,6 +17,7 @@ type Booking = {
   driverName: string | null
   driverPhone: string | null
   carInfo: string | null
+  carClass: string | null
   notes: string | null
   createdAt: string
   cancelReason: string | null
@@ -309,7 +310,7 @@ export default function DispatcherPage() {
             <table className="w-full">
               <thead className="bg-[#F5F0EB]">
                 <tr>
-                  {["ID", "Дата", "Маршрут", "Клиент", "Водитель", "Пассажиры", "Цена", "Статус", "Действия"].map(h => (
+                  {["ID", "Дата", "Маршрут", "Клиент", "Водитель", "Пассажиры", "Класс", "Цена", "Статус", "Действия"].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">{h}</th>
                   ))}
                 </tr>
@@ -333,6 +334,7 @@ export default function DispatcherPage() {
                       ) : <span className="text-[#B8D4E3]">—</span>}
                     </td>
                     <td className="px-4 py-3 text-sm">{b.passengers} чел.</td>
+                    <td className="px-4 py-3 text-sm text-[#8B7355]">{b.carClass || "—"}</td>
                     <td className="px-4 py-3 text-sm font-medium">{b.priceFinal || b.priceCalculated} ₽</td>
                     <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[b.status]}`}>{statusText[b.status]}</span></td>
                     <td className="px-4 py-3">
