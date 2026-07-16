@@ -41,7 +41,12 @@ function readUserFromHeaders(request?: Request): SessionUser | null {
   const phone = h?.get("x-user-phone")
   const role = h?.get("x-user-role")
   if (!id || !phone || !role) return null
-  return { id, phone, name: h?.get("x-user-name") || null, role }
+  const rawName = h?.get("x-user-name") || ""
+  let name: string | null = null
+  if (rawName) {
+    try { name = decodeURIComponent(atob(rawName)) } catch { name = rawName }
+  }
+  return { id, phone, name, role }
 }
 
 export function requireAuth(request?: Request): Result {

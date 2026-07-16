@@ -174,7 +174,8 @@ async function handleApiRoute(request: NextRequest, pathname: string) {
 
     requestHeaders.set("x-user-id", payload.id as string)
     requestHeaders.set("x-user-phone", payload.phone as string)
-    requestHeaders.set("x-user-name", (payload.name as string) || "")
+    const nameStr = (payload.name as string) || ""
+    requestHeaders.set("x-user-name", nameStr ? btoa(encodeURIComponent(nameStr)) : "")
     requestHeaders.set("x-user-role", payload.role as string)
   }
 
