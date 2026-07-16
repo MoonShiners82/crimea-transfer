@@ -22,6 +22,6 @@
 - YC_REGISTRY_LOGIN = Login из п.2
 - YC_REGISTRY_PASSWORD = Secret из п.2
 - DATABASE_URL = postgresql://... (твоя строка из .env)
-- NEXTAUTH_SECRET = секретный ключ
+- JWT_SECRET = секретный ключ
 - PLUSOFON_API_KEY = 43VkNjDgu9uxr6a5sMkk5RKuvhgbHksP
 - YC_FOLDER_ID = b1gvnuqsklois79c98aj

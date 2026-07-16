@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs"
 
 export async function POST(req: Request) {
   try {
-    const { res } = await requireRole("admin")
+    const { res } = requireRole("admin", req)
     if (res) return res
 
     const { userId, password } = await req.json()

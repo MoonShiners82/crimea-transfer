@@ -4,10 +4,10 @@ import { prisma } from "@/lib/prisma"
 
 export async function POST(req: Request) {
   try {
-    const { res } = await requireRole(["admin", "dispatcher"])
+    const { res } = requireRole(["admin", "dispatcher"], req)
     if (res) return res
 
-    const { bookingId, priceFinal, driverName, driverPhone, carInfo } = await req.json()
+    const { bookingId, priceFinal, driverName, driverPhone, carInfo, routeId, notes } = await req.json()
     if (!bookingId) return NextResponse.json({ error: "Booking ID required" }, { status: 400 })
 
     const booking = await prisma.booking.update({
@@ -17,6 +17,8 @@ export async function POST(req: Request) {
         ...(driverName !== undefined && { driverName }),
         ...(driverPhone !== undefined && { driverPhone }),
         ...(carInfo !== undefined && { carInfo }),
+        ...(routeId !== undefined && { routeId }),
+        ...(notes !== undefined && { notes }),
       }
     })
 

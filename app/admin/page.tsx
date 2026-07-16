@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useToast } from "../components/Toast"
 import { useAuth } from "@/lib/useAuth"
+import { Skeleton, TableSkeleton } from "../components/Skeleton"
 
 type Booking = {
   id: string
@@ -17,10 +18,11 @@ type Booking = {
   driverName: string | null
   driverPhone: string | null
   carInfo: string | null
+  notes: string | null
   createdAt: string
   cancelReason: string | null
   user: { phone: string; name: string | null }
-  route: { fromPoint: string; toPoint: string }
+  route: { id: string; fromPoint: string; toPoint: string }
 }
 
 type Stats = {
@@ -37,15 +39,25 @@ type Driver = {
   name: string
   phone: string
   carInfo: string
+  licensePlate: string | null
+  photoUrl: string | null
   isActive: boolean
   status: string
   createdAt: string
+}
+
+type Route = {
+  id: string
+  fromPoint: string
+  toPoint: string
+  priceBase: number
 }
 
 const statusOptions = [
   { value: "", label: "Все" },
   { value: "pending", label: "Ожидают" },
   { value: "confirmed", label: "Подтверждённые" },
+  { value: "in_progress", label: "В пути" },
   { value: "completed", label: "Завершённые" },
   { value: "cancelled", label: "Отменённые" },
 ]
@@ -53,13 +65,15 @@ const statusOptions = [
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800",
   confirmed: "bg-green-100 text-green-800",
+  in_progress: "bg-blue-100 text-blue-800",
   cancelled: "bg-red-100 text-red-800",
-  completed: "bg-blue-100 text-blue-800",
+  completed: "bg-gray-100 text-gray-800",
 }
 
 const statusText: Record<string, string> = {
   pending: "Ожидает",
   confirmed: "Подтверждена",
+  in_progress: "В пути",
   cancelled: "Отменена",
   completed: "Завершена",
 }
@@ -74,9 +88,12 @@ export default function AdminPage() {
   const [drivers, setDrivers] = useState<Driver[]>([])
   const [applications, setApplications] = useState<Driver[]>([])
   const [dispatchers, setDispatchers] = useState<{ id: string; phone: string; name: string | null; role: string }[]>([])
+  const [routes, setRoutes] = useState<Route[]>([])
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
+  const [exportDateFrom, setExportDateFrom] = useState("")
+  const [exportDateTo, setExportDateTo] = useState("")
   const [showDashboard, setShowDashboard] = useState(true)
 
   // Confirm modal
@@ -93,6 +110,7 @@ export default function AdminPage() {
   const [editDriver, setEditDriver] = useState("")
   const [editDriverPhone, setEditDriverPhone] = useState("")
   const [editCarInfo, setEditCarInfo] = useState("")
+  const [editRouteId, setEditRouteId] = useState("")
   const [editing, setEditing] = useState(false)
 
   // Driver modal
@@ -111,16 +129,18 @@ export default function AdminPage() {
   const [newPassword, setNewPassword] = useState("")
   const [settingPassword, setSettingPassword] = useState(false)
 
-  const fetchBookings = async () => {
+  const fetchBookings = async (statusOverride?: string, searchOverride?: string) => {
     try {
       const params = new URLSearchParams()
-      if (filterStatus) params.set("status", filterStatus)
-      if (searchQuery) params.set("search", searchQuery)
+      const s = statusOverride ?? filterStatus
+      const q = searchOverride ?? searchQuery
+      if (s) params.set("status", s)
+      if (q) params.set("search", q)
       const res = await fetch(`/api/admin/bookings${params.toString() ? `?${params.toString()}` : ""}`)
       if (res.status === 403) { router.push("/"); return }
-      setBookings(await res.json())
+      const result = await res.json()
+      setBookings(result.data ?? result)
     } catch (e) { console.error(e) }
-    finally { setLoading(false) }
   }
 
   const fetchStats = async () => {
@@ -177,6 +197,13 @@ export default function AdminPage() {
     } catch (e) { console.error(e) }
   }
 
+  const fetchRoutes = async () => {
+    try {
+      const res = await fetch("/api/routes")
+      if (res.ok) setRoutes(await res.json())
+    } catch (e) { console.error(e) }
+  }
+
   const handleSetDispatcher = async (phone: string) => {
     if (!confirm(`Назначить ${phone} диспетчером?`)) return
     try {
@@ -228,11 +255,14 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (authStatus === "authenticated") {
-      fetchBookings()
-      fetchStats()
-      fetchDrivers()
-      fetchApplications()
-      fetchDispatchers()
+      Promise.all([
+        fetchBookings(),
+        fetchStats(),
+        fetchDrivers(),
+        fetchApplications(),
+        fetchDispatchers(),
+        fetchRoutes()
+      ]).finally(() => setLoading(false))
     }
   }, [authStatus])
 
@@ -260,7 +290,14 @@ export default function AdminPage() {
       const res = await fetch("/api/admin/bookings/edit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId: editingBooking.id, priceFinal: parseInt(editPrice), driverName: editDriver, driverPhone: editDriverPhone, carInfo: editCarInfo })
+        body: JSON.stringify({
+          bookingId: editingBooking.id,
+          priceFinal: parseInt(editPrice) || undefined,
+          driverName: editDriver || undefined,
+          driverPhone: editDriverPhone || undefined,
+          carInfo: editCarInfo || undefined,
+          routeId: editRouteId || undefined
+        })
       })
       if (res.ok) { setEditingBooking(null); fetchBookings(); toast("Сохранено", "success") }
       else toast("Ошибка сохранения", "error")
@@ -311,12 +348,29 @@ export default function AdminPage() {
     const params = new URLSearchParams()
     if (filterStatus) params.set("status", filterStatus)
     if (searchQuery) params.set("search", searchQuery)
+    if (exportDateFrom) params.set("dateFrom", exportDateFrom)
+    if (exportDateTo) params.set("dateTo", exportDateTo)
     params.set("format", format)
     window.open(`/api/admin/export?${params.toString()}`, "_blank")
   }
 
   if (authStatus === "loading" || loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-[#F5F0EB]"><div className="animate-spin rounded-full h-8 w-8 border-2 border-[#2D6A8F] border-t-transparent"></div></div>
+    return (
+      <div className="min-h-screen bg-[#F5F0EB] py-8">
+        <div className="max-w-7xl mx-auto px-4 space-y-6">
+          <Skeleton className="h-8 w-1/3" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-lg p-4 border border-[#B8D4E3] space-y-2">
+                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-8 w-1/3" />
+              </div>
+            ))}
+          </div>
+          <TableSkeleton rows={5} cols={6} />
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -363,7 +417,10 @@ export default function AdminPage() {
             Заявки водителей {applications.length > 0 && <span className="ml-1 bg-[#E8A838] text-[#1A2332] px-1.5 py-0.5 rounded-full text-xs">{applications.length}</span>}
           </button>
           <button onClick={() => setTab("dispatchers")} className={`px-4 py-2 rounded-lg text-sm font-medium transition ${tab === "dispatchers" ? "bg-[#1A2332] text-white" : "bg-white text-[#1A2332] hover:bg-gray-100 border border-[#B8D4E3]"}`}>Диспетчеры</button>
-          <div className="ml-auto flex gap-2">
+          <div className="ml-auto flex gap-2 items-center">
+            <input type="date" value={exportDateFrom} onChange={e => setExportDateFrom(e.target.value)} className="px-2 py-1.5 border border-[#B8D4E3] rounded-lg text-sm" placeholder="С даты" />
+            <span className="text-[#8B7355] text-sm">—</span>
+            <input type="date" value={exportDateTo} onChange={e => setExportDateTo(e.target.value)} className="px-2 py-1.5 border border-[#B8D4E3] rounded-lg text-sm" placeholder="По дату" />
             <button onClick={() => handleExport("csv")} className="bg-white text-[#1A2332] px-3 py-2 rounded-lg text-sm hover:bg-gray-100 border border-[#B8D4E3] transition">📥 CSV</button>
             <button onClick={() => handleExport("json")} className="bg-white text-[#1A2332] px-3 py-2 rounded-lg text-sm hover:bg-gray-100 border border-[#B8D4E3] transition">📥 JSON</button>
           </div>
@@ -374,12 +431,13 @@ export default function AdminPage() {
           <>
             <div className="flex flex-wrap gap-2 mb-6">
               {statusOptions.map((opt) => (
-                <button key={opt.value} onClick={() => setFilterStatus(opt.value)}
+                <button key={opt.value} onClick={() => { setFilterStatus(opt.value); setLoading(true); fetchBookings(opt.value) }}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition ${filterStatus === opt.value ? "bg-[#E8A838] text-[#1A2332]" : "bg-white text-[#1A2332] hover:bg-gray-100 border border-[#B8D4E3]"}`}>
                   {opt.label}
                 </button>
               ))}
               <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { setLoading(true); fetchBookings(undefined, searchQuery) } }}
                 placeholder="Поиск по телефону, имени, маршруту..." className="ml-auto px-4 py-2 border border-[#B8D4E3] rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-[#2D6A8F] bg-white" />
             </div>
 
@@ -416,19 +474,25 @@ export default function AdminPage() {
                                 className="bg-[#E8A838] text-[#1A2332] px-2 py-1 rounded text-xs font-medium hover:bg-[#d49a30]">Подтвердить</button>
                             )}
                             {b.status === "confirmed" && (
+                              <button onClick={() => handleStatus(b.id, "in_progress")} disabled={completingId === b.id}
+                                className="bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium hover:bg-blue-600 disabled:opacity-50">
+                                {completingId === b.id ? "..." : "В путь"}
+                              </button>
+                            )}
+                            {b.status === "in_progress" && (
                               <button onClick={() => handleStatus(b.id, "completed")} disabled={completingId === b.id}
                                 className="bg-[#2D6A8F] text-white px-2 py-1 rounded text-xs font-medium hover:bg-[#245a7a] disabled:opacity-50">
                                 {completingId === b.id ? "..." : "Завершить"}
                               </button>
                             )}
-                            {(b.status === "pending" || b.status === "confirmed") && (
+                            {(b.status === "pending" || b.status === "confirmed" || b.status === "in_progress") && (
                               <button onClick={() => handleStatus(b.id, "cancelled")} disabled={cancellingId === b.id}
                                 className="bg-red-500 text-white px-2 py-1 rounded text-xs font-medium hover:bg-red-600 disabled:opacity-50">
                                 {cancellingId === b.id ? "..." : "Отмена"}
                               </button>
                             )}
                             {b.status !== "cancelled" && (
-                              <button onClick={() => { setEditingBooking(b); setEditPrice((b.priceFinal || b.priceCalculated).toString()); setEditDriver(b.driverName || ""); setEditDriverPhone(b.driverPhone || ""); setEditCarInfo(b.carInfo || "") }}
+                              <button onClick={() => { setEditingBooking(b); setEditPrice((b.priceFinal || b.priceCalculated).toString()); setEditDriver(b.driverName || ""); setEditDriverPhone(b.driverPhone || ""); setEditCarInfo(b.carInfo || ""); setEditRouteId(b.route?.id || "") }}
                                 className="bg-gray-200 text-[#1A2332] px-2 py-1 rounded text-xs font-medium hover:bg-gray-300">✏️</button>
                             )}
                           </div>
@@ -457,6 +521,7 @@ export default function AdminPage() {
                     <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Имя</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Телефон</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Автомобиль</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Гос. номер</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Статус</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Пароль</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Действия</th>
@@ -468,6 +533,7 @@ export default function AdminPage() {
                       <td className="px-4 py-3 text-sm font-medium">{d.name}</td>
                       <td className="px-4 py-3 text-sm">{d.phone}</td>
                       <td className="px-4 py-3 text-sm">{d.carInfo}</td>
+                      <td className="px-4 py-3 text-sm text-[#8B7355]">{d.licensePlate || "—"}</td>
                       <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${d.isActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>{d.isActive ? "Активен" : "Неактивен"}</span></td>
                       <td className="px-4 py-3">
                         {d.userId ? (
@@ -598,6 +664,7 @@ export default function AdminPage() {
               <p><strong>Дата:</strong> {new Date(selectedBooking.datetime).toLocaleString("ru")}</p>
               <p><strong>Клиент:</strong> {selectedBooking.user.name && `${selectedBooking.user.name} — `}{selectedBooking.user.phone}</p>
               <p><strong>Пассажиры:</strong> {selectedBooking.passengers}</p>
+              {selectedBooking.notes && <p><strong>Комментарий:</strong> {selectedBooking.notes}</p>}
             </div>
             <form onSubmit={handleConfirm} className="space-y-3">
               <input type="text" placeholder="Имя водителя" value={driverName} onChange={e => setDriverName(e.target.value)} className="w-full p-2 border border-[#B8D4E3] rounded-lg" required />
@@ -622,6 +689,16 @@ export default function AdminPage() {
               <p><strong>Маршрут:</strong> {editingBooking.route.fromPoint} → {editingBooking.route.toPoint}</p>
             </div>
             <form onSubmit={handleEdit} className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-[#1A2332] mb-1">Маршрут</label>
+                <select value={editRouteId} onChange={e => setEditRouteId(e.target.value)}
+                  className="w-full p-2 border border-[#B8D4E3] rounded-lg">
+                  <option value="">Без изменений</option>
+                  {routes.map(r => (
+                    <option key={r.id} value={r.id}>{r.fromPoint} → {r.toPoint} ({r.priceBase} ₽)</option>
+                  ))}
+                </select>
+              </div>
               <input type="text" placeholder="Имя водителя" value={editDriver} onChange={e => setEditDriver(e.target.value)} className="w-full p-2 border border-[#B8D4E3] rounded-lg" />
               <input type="tel" placeholder="Телефон водителя" value={editDriverPhone} onChange={e => setEditDriverPhone(e.target.value)} className="w-full p-2 border border-[#B8D4E3] rounded-lg" />
               <input type="text" placeholder="Автомобиль" value={editCarInfo} onChange={e => setEditCarInfo(e.target.value)} className="w-full p-2 border border-[#B8D4E3] rounded-lg" />

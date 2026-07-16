@@ -1,7 +1,7 @@
 import { SignJWT, jwtVerify, type JWTPayload } from "jose"
 import { cookies } from "next/headers"
 
-const secret = new TextEncoder().encode(process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET)
+const secret = new TextEncoder().encode(process.env.JWT_SECRET)
 
 const ACCESS_COOKIE = "token"
 const REFRESH_COOKIE = "refresh_token"

@@ -1,32 +1,33 @@
 import { NextResponse } from "next/server"
-import { requireAuth } from "@/lib/auth-helpers"
+import { requireAuthWithDB } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
+import type { Driver } from "@prisma/client"
 
-async function requireDriver() {
-  const result = await requireAuth()
-  if (result.res) return result
+async function requireDriver(req?: Request): Promise<{ driver: Driver; res: null } | { driver: null; res: NextResponse }> {
+  const result = await requireAuthWithDB(req)
+  if (result.res) return { driver: null, res: result.res }
 
   const driver = await prisma.driver.findUnique({
     where: { userId: result.dbUser.id }
   })
 
   if (!driver || driver.status !== "approved") {
-    return { user: null, dbUser: null, driver: null, res: NextResponse.json({ error: "Доступ запрещён" }, { status: 403 }) }
+    return { driver: null, res: NextResponse.json({ error: "Доступ запрещён" }, { status: 403 }) }
   }
 
-  return { ...result, driver, res: null }
+  return { driver, res: null }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const { driver, res } = await requireDriver()
+    const { driver, res } = await requireDriver(req)
     if (res) return res
 
     const bookings = await prisma.booking.findMany({
       where: {
         OR: [
-          { driverId: driver!.id },
-          { driverName: driver!.name }
+          { driverId: driver.id },
+          { driverName: driver.name }
         ]
       },
       include: {

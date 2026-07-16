@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server"
-import { requireAuth } from "@/lib/auth-helpers"
+import { requireAuthWithDB } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
+import { logBookingAudit } from "@/lib/audit"
 
 export async function GET(req: Request) {
   try {
-    const { dbUser, res } = await requireAuth()
+    const { dbUser, res } = await requireAuthWithDB(req)
     if (res) return res
 
     const { searchParams } = new URL(req.url)
@@ -36,7 +37,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { dbUser, res } = await requireAuth()
+    const { dbUser, res } = await requireAuthWithDB(req)
     if (res) return res
 
     const data = await req.json()
@@ -88,11 +89,19 @@ export async function POST(req: Request) {
         passengers: data.passengers,
         baggageType: data.baggageType,
         priceCalculated,
+        notes: data.notes || null,
         status: "pending"
       },
       include: {
         route: { select: { fromPoint: true, toPoint: true } }
       }
+    })
+
+    await logBookingAudit({
+      bookingId: booking.id,
+      action: "created",
+      newStatus: "pending",
+      performedBy: dbUser.phone,
     })
 
     return NextResponse.json({ success: true, booking }, { status: 201 })

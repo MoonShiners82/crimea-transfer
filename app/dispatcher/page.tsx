@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useToast } from "../components/Toast"
 import { useAuth } from "@/lib/useAuth"
+import { Skeleton, TableSkeleton } from "../components/Skeleton"
 
 type Booking = {
   id: string
@@ -16,11 +17,11 @@ type Booking = {
   driverName: string | null
   driverPhone: string | null
   carInfo: string | null
+  notes: string | null
   createdAt: string
   cancelReason: string | null
   user: { phone: string; name: string | null }
   route: { id: string; fromPoint: string; toPoint: string }
-  routeId: string
 }
 
 type Driver = {
@@ -119,7 +120,10 @@ export default function DispatcherPage() {
       if (searchQuery) params.set("search", searchQuery)
       const res = await fetch(`/api/dispatcher/bookings${params.toString() ? `?${params.toString()}` : ""}`)
       if (res.status === 403) { router.push("/"); return }
-      if (res.ok) setBookings(await res.json())
+      if (res.ok) {
+        const result = await res.json()
+        setBookings(result.data ?? result)
+      }
     } catch (e) { console.error(e) }
     finally { setLoading(false) }
   }
@@ -229,7 +233,7 @@ export default function DispatcherPage() {
 
   const openEdit = (b: Booking) => {
     setEditBooking(b)
-    setEditRouteId(b.routeId || "")
+    setEditRouteId(b.route?.id || "")
     setEditPrice((b.priceFinal || b.priceCalculated).toString())
     setEditCarInfo(b.carInfo || "")
     setEditStatus(b.status)
@@ -239,8 +243,19 @@ export default function DispatcherPage() {
 
   if (authStatus === "loading" || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F5F0EB]">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#2D6A8F] border-t-transparent"></div>
+      <div className="min-h-screen bg-[#F5F0EB] py-8">
+        <div className="max-w-7xl mx-auto px-4 space-y-6">
+          <Skeleton className="h-8 w-1/3" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-lg p-4 border border-[#B8D4E3] space-y-2">
+                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-8 w-1/3" />
+              </div>
+            ))}
+          </div>
+          <TableSkeleton rows={5} cols={5} />
+        </div>
       </div>
     )
   }
@@ -357,6 +372,7 @@ export default function DispatcherPage() {
               <p><strong>Дата:</strong> {new Date(selectedBooking.datetime).toLocaleString("ru")}</p>
               <p><strong>Клиент:</strong> {selectedBooking.user.name && `${selectedBooking.user.name} — `}{selectedBooking.user.phone}</p>
               <p><strong>Пассажиры:</strong> {selectedBooking.passengers}</p>
+              {selectedBooking.notes && <p><strong>Комментарий:</strong> {selectedBooking.notes}</p>}
             </div>
             <form onSubmit={handleConfirm} className="space-y-3">
               <div>

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server"
-import { requireAuth } from "@/lib/auth-helpers"
+import { requireAuthWithDB } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 
 export async function POST(req: Request) {
   try {
-    const { dbUser, res } = await requireAuth()
+    const { dbUser, res } = await requireAuthWithDB(req)
     if (res) return res
 
     const existingDriver = await prisma.driver.findUnique({
@@ -15,7 +15,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Вы уже зарегистрированы как водитель" }, { status: 400 })
     }
 
-    const { name, phone, carInfo, photoUrl } = await req.json()
+    const { name, phone, carInfo, licensePlate, photoUrl } = await req.json()
 
     if (!name || !phone || !carInfo) {
       return NextResponse.json({ error: "Заполните все обязательные поля" }, { status: 400 })
@@ -27,6 +27,7 @@ export async function POST(req: Request) {
         name,
         phone,
         carInfo,
+        licensePlate: licensePlate || null,
         photoUrl: photoUrl || null,
         status: "pending"
       }

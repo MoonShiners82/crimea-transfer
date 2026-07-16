@@ -4,13 +4,15 @@ import { prisma } from "@/lib/prisma"
 
 export async function GET(req: Request) {
   try {
-    const { res } = await requireRole("admin")
+    const { res } = requireRole("admin", req)
     if (res) return res
 
     const { searchParams } = new URL(req.url)
     const format = searchParams.get("format") || "csv"
     const status = searchParams.get("status")
     const search = searchParams.get("search")
+    const dateFrom = searchParams.get("dateFrom")
+    const dateTo = searchParams.get("dateTo")
 
     const where: Record<string, unknown> = {}
     if (status) where.status = status
@@ -21,6 +23,11 @@ export async function GET(req: Request) {
         { route: { fromPoint: { contains: search, mode: "insensitive" } } },
         { route: { toPoint: { contains: search, mode: "insensitive" } } },
       ]
+    }
+    if (dateFrom || dateTo) {
+      where.datetime = {}
+      if (dateFrom) (where.datetime as Record<string, Date>).gte = new Date(dateFrom)
+      if (dateTo) (where.datetime as Record<string, Date>).lte = new Date(dateTo + "T23:59:59")
     }
 
     const bookings = await prisma.booking.findMany({

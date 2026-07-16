@@ -10,6 +10,7 @@ export default function DriverRegisterPage() {
   const [name, setName] = useState("")
   const [phone, setPhone] = useState("")
   const [carInfo, setCarInfo] = useState("")
+  const [licensePlate, setLicensePlate] = useState("")
   const [photo, setPhoto] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -43,7 +44,7 @@ export default function DriverRegisterPage() {
       const res = await fetch("/api/driver/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, phone, carInfo, photoUrl: photo })
+        body: JSON.stringify({ name, phone, carInfo, licensePlate: licensePlate || undefined, photoUrl: photo })
       })
 
       const data = await res.json()
@@ -137,6 +138,17 @@ export default function DriverRegisterPage() {
                 placeholder="Toyota Camry, белый"
                 value={carInfo}
                 onChange={(e) => setCarInfo(e.target.value)}
+                className="w-full px-4 py-3 border border-[#B8D4E3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2D6A8F] bg-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[#1A2332] mb-1">Гос. номер <span className="text-[#8B7355]">(необязательно)</span></label>
+              <input
+                type="text"
+                placeholder="А123БВ777"
+                value={licensePlate}
+                onChange={(e) => setLicensePlate(e.target.value.toUpperCase())}
                 className="w-full px-4 py-3 border border-[#B8D4E3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2D6A8F] bg-white"
               />
             </div>

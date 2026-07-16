@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useToast } from "../components/Toast"
 import { useAuth } from "@/lib/useAuth"
+import { Skeleton, CardSkeleton } from "../components/Skeleton"
 
 type Booking = {
   id: string
@@ -121,8 +122,14 @@ export default function DriverPage() {
 
   if (authStatus === "loading" || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F5F0EB]">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#2D6A8F] border-t-transparent"></div>
+      <div className="min-h-screen bg-[#F5F0EB] py-8">
+        <div className="max-w-4xl mx-auto px-4 space-y-6">
+          <Skeleton className="h-8 w-1/3" />
+          <CardSkeleton />
+          <div className="space-y-4">
+            {Array.from({ length: 3 }).map((_, i) => <CardSkeleton key={i} />)}
+          </div>
+        </div>
       </div>
     )
   }

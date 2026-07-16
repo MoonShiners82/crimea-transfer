@@ -54,6 +54,7 @@ model Booking {
   driverName      String?
   driverPhone     String?
   carInfo         String?
+  notes           String?
   createdAt       DateTime  @default(now())
   confirmedAt     DateTime?
   cancelReason    String?
@@ -77,17 +78,18 @@ model VerificationToken {
 }
 
 model Driver {
-  id        String    @id @default(cuid())
-  userId    String?   @unique
-  user      User?     @relation(fields: [userId], references: [id])
-  name      String
-  phone     String
-  carInfo   String
-  photoUrl  String?
-  status    String    @default("pending") // pending | approved | rejected
-  isActive  Boolean   @default(true)
-  createdAt DateTime  @default(now())
-  bookings  Booking[]
+  id           String    @id @default(cuid())
+  userId       String?   @unique
+  user         User?     @relation(fields: [userId], references: [id])
+  name         String
+  phone        String
+  carInfo      String
+  licensePlate String?
+  photoUrl     String?
+  status       String    @default("pending") // pending | approved | rejected
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  bookings     Booking[]
 
   @@index([userId])
   @@index([status])
@@ -104,4 +106,30 @@ model RefreshToken {
   @@index([userId])
   @@index([token])
   @@index([expiresAt])
+}
+
+model BookingAudit {
+  id         String   @id @default(cuid())
+  bookingId  String
+  action     String
+  oldStatus  String?
+  newStatus  String?
+  performedBy String?
+  details    String?
+  createdAt  DateTime @default(now())
+
+  @@index([bookingId])
+  @@index([createdAt])
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  name       String
+  text       String
+  rating     Int      @default(5)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  @@index([isActive])
+  @@index([createdAt])
 }

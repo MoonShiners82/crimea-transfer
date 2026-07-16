@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { jwtVerify, type JWTPayload } from "jose"
 
-const jwtSecret = new TextEncoder().encode(process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET)
+const jwtSecret = new TextEncoder().encode(process.env.JWT_SECRET)
 
 const store = new Map<string, { count: number; resetAt: number }>()
 let lastCleanup = Date.now()
@@ -123,10 +123,6 @@ async function handleApiRoute(request: NextRequest, pathname: string) {
     )
   }
 
-  const response = NextResponse.next()
-  response.headers.set("X-RateLimit-Limit", String(config.max))
-  response.headers.set("X-RateLimit-Remaining", String(result.remaining))
-
   if (CSRF_MUTATING_METHODS.has(request.method)) {
     const origin = request.headers.get("origin")
     const host = request.headers.get("host")
@@ -153,25 +149,37 @@ async function handleApiRoute(request: NextRequest, pathname: string) {
   ]
 
   const isPublic = PUBLIC_API_ROUTES.some(route => pathname.startsWith(route))
-  if (isPublic) return response
 
-  const token = request.cookies.get("token")?.value
-  if (!token) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const requestHeaders = new Headers(request.headers)
 
-  const payload = await verifyJwt(token)
-  if (!payload) {
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 })
-  }
-
-  const requiredRoles = matchRole(pathname, API_ROLE_MAP)
-  if (requiredRoles) {
-    const userRole = payload.role as string
-    if (!requiredRoles.includes(userRole)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  if (!isPublic) {
+    const token = request.cookies.get("token")?.value
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
+
+    const payload = await verifyJwt(token)
+    if (!payload) {
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+    }
+
+    const requiredRoles = matchRole(pathname, API_ROLE_MAP)
+    if (requiredRoles) {
+      const userRole = payload.role as string
+      if (!requiredRoles.includes(userRole)) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+      }
+    }
+
+    requestHeaders.set("x-user-id", payload.id as string)
+    requestHeaders.set("x-user-phone", payload.phone as string)
+    requestHeaders.set("x-user-name", (payload.name as string) || "")
+    requestHeaders.set("x-user-role", payload.role as string)
   }
+
+  const response = NextResponse.next({ request: { headers: requestHeaders } })
+  response.headers.set("X-RateLimit-Limit", String(config.max))
+  response.headers.set("X-RateLimit-Remaining", String(result.remaining))
 
   return response
 }
@@ -211,5 +219,5 @@ async function handlePageRoute(request: NextRequest, pathname: string) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|public/).*)"],
+  matcher: ["/api/:path*", "/admin/:path*", "/dispatcher/:path*", "/driver/:path*", "/booking/:path*", "/bookings/:path*"],
 }

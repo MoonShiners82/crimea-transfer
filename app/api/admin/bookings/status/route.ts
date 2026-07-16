@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server"
 import { requireRole } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
+import { logBookingAudit } from "@/lib/audit"
 
 export async function POST(req: Request) {
   try {
-    const { res } = await requireRole(["admin", "dispatcher"])
+    const { res, user } = requireRole(["admin", "dispatcher"], req)
     if (res) return res
 
     const { bookingId, status, reason } = await req.json()
@@ -13,7 +14,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "bookingId и status обязательны" }, { status: 400 })
     }
 
-    const allowedStatuses = ["confirmed", "completed", "cancelled"]
+    const allowedStatuses = ["confirmed", "in_progress", "completed", "cancelled"]
     if (!allowedStatuses.includes(status)) {
       return NextResponse.json({ error: "Недопустимый статус" }, { status: 400 })
     }
@@ -26,7 +27,8 @@ export async function POST(req: Request) {
 
     const validTransitions: Record<string, string[]> = {
       pending: ["confirmed", "cancelled"],
-      confirmed: ["completed", "cancelled"]
+      confirmed: ["in_progress", "completed", "cancelled"],
+      in_progress: ["completed", "cancelled"]
     }
 
     if (!validTransitions[booking.status]?.includes(status)) {
@@ -51,8 +53,17 @@ export async function POST(req: Request) {
       data: updateData,
       include: {
         user: { select: { phone: true, name: true } },
-        route: { select: { fromPoint: true, toPoint: true } }
+        route: { select: { id: true, fromPoint: true, toPoint: true } }
       }
+    })
+
+    await logBookingAudit({
+      bookingId,
+      action: "status_change",
+      oldStatus: booking.status,
+      newStatus: status,
+      performedBy: user?.phone,
+      details: reason || undefined,
     })
 
     return NextResponse.json({ success: true, booking: updated })

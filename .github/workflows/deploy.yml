@@ -79,8 +79,7 @@ jobs:
             --execution-timeout 300 \
             --image-id ${{ steps.image.outputs.image_id }} \
             --env "DATABASE_URL=${{ secrets.DATABASE_URL }}" \
-            --env "NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}" \
-            --env "NEXTAUTH_URL=https://crimea-transfer.${{ env.FOLDER_ID }}.containers.yandexcloud.net" \
+            --env "JWT_SECRET=${{ secrets.JWT_SECRET }}" \
             --env "PLUSOFON_API_KEY=${{ secrets.PLUSOFON_API_KEY }}" \
             --port 80=3000 \
             --network-ids default

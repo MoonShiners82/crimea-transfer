@@ -51,3 +51,13 @@ next-env.d.ts
 
 # mimocode
 .mimocode/
+
+# logs
+*.log
+server_out.log
+stderr.log
+stdout.log
+
+# scripts (debug/test)
+scripts/debug-*.ts
+scripts/test-*.ts

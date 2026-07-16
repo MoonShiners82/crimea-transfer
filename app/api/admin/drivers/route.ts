@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma"
 
 export async function GET(req: Request) {
   try {
-    const { res } = await requireRole(["admin", "dispatcher"])
+    const { res } = requireRole(["admin", "dispatcher"], req)
     if (res) return res
 
     const { searchParams } = new URL(req.url)
@@ -21,7 +21,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { res } = await requireRole("admin")
+    const { res } = requireRole("admin", req)
     if (res) return res
 
     const { name, phone, carInfo } = await req.json()
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
-    const { res } = await requireRole("admin")
+    const { res } = requireRole("admin", req)
     if (res) return res
 
     const { searchParams } = new URL(req.url)

@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma"
 
 export async function GET() {
   try {
-    const { res } = await requireRole("admin")
+    const { res } = requireRole("admin")
     if (res) return res
 
     const now = new Date()

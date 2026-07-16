@@ -36,6 +36,7 @@ export default function BookingPage() {
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [acceptPersonalData, setAcceptPersonalData] = useState(false)
   const [acceptMarketing, setAcceptMarketing] = useState(false)
+  const [notes, setNotes] = useState("")
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -61,7 +62,7 @@ export default function BookingPage() {
       fetch("/api/calculate-price", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ routeId, passengers, baggage, datetime })
+        body: JSON.stringify({ routeId, passengers, baggage, datetime, notes: notes || undefined })
       })
         .then(res => res.json())
         .then(data => setPrice(data.price || 0))
@@ -240,6 +241,20 @@ export default function BookingPage() {
                 </div>
               </div>
             )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Комментарий к заявке <span className="text-gray-400">(необязательно)</span>
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Особые пожелания, время встречи, номер рейса..."
+                className="w-full p-3 border border-gray-300 rounded-lg text-sm resize-none"
+                rows={3}
+                maxLength={500}
+              />
+            </div>
 
             <div className="space-y-3 pt-2">
               <label className="flex items-start gap-3 cursor-pointer">

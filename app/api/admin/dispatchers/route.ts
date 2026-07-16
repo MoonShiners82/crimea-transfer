@@ -2,9 +2,9 @@ import { NextResponse } from "next/server"
 import { requireRole } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const { res } = await requireRole("admin")
+    const { res } = requireRole("admin", req)
     if (res) return res
 
     const dispatchers = await prisma.user.findMany({
@@ -22,7 +22,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const { res } = await requireRole("admin")
+    const { res } = requireRole("admin", req)
     if (res) return res
 
     const { phone } = await req.json()
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
-    const { res } = await requireRole("admin")
+    const { res } = requireRole("admin", req)
     if (res) return res
 
     const { searchParams } = new URL(req.url)

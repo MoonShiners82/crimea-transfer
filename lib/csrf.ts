@@ -1,7 +1,7 @@
 import { cookies } from "next/headers"
 import crypto from "crypto"
 
-const CSRF_SECRET = process.env.CSRF_SECRET || process.env.NEXTAUTH_SECRET || ""
+const CSRF_SECRET = process.env.CSRF_SECRET || process.env.JWT_SECRET || ""
 const COOKIE_NAME = "csrf_token"
 const HEADER_NAME = "x-csrf-token"
 

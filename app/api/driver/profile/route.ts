@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server"
-import { requireAuth } from "@/lib/auth-helpers"
+import { requireAuthWithDB } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const { dbUser, res } = await requireAuth()
+    const { dbUser, res } = await requireAuthWithDB(req)
     if (res) return res
 
     const driver = await prisma.driver.findUnique({
@@ -24,7 +24,7 @@ export async function GET() {
 
 export async function PUT(req: Request) {
   try {
-    const { dbUser, res } = await requireAuth()
+    const { dbUser, res } = await requireAuthWithDB(req)
     if (res) return res
 
     const driver = await prisma.driver.findUnique({
@@ -35,7 +35,7 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "Вы не зарегистрированы как водитель" }, { status: 404 })
     }
 
-    const { name, phone, carInfo, photoUrl } = await req.json()
+    const { name, phone, carInfo, licensePlate, photoUrl } = await req.json()
 
     const updated = await prisma.driver.update({
       where: { id: driver.id },
@@ -43,6 +43,7 @@ export async function PUT(req: Request) {
         ...(name && { name }),
         ...(phone && { phone }),
         ...(carInfo && { carInfo }),
+        ...(licensePlate !== undefined && { licensePlate }),
         ...(photoUrl !== undefined && { photoUrl })
       }
     })

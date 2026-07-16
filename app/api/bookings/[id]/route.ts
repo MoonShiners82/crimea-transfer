@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server"
-import { requireAuth } from "@/lib/auth-helpers"
+import { requireAuthWithDB } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
+import { logBookingAudit } from "@/lib/audit"
 
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { dbUser, res } = await requireAuth()
+    const { dbUser, res } = await requireAuthWithDB(req)
     if (res) return res
 
     const { id } = await params
@@ -46,7 +47,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { dbUser, res } = await requireAuth()
+    const { dbUser, res } = await requireAuthWithDB(req)
     if (res) return res
 
     const { id } = await params
@@ -77,7 +78,7 @@ export async function PATCH(
       )
     }
 
-    const allowedUpdates = ["datetime", "passengers", "baggageType"]
+    const allowedUpdates = ["datetime", "passengers", "baggageType", "notes"]
     const updates: Record<string, unknown> = {}
 
     for (const field of allowedUpdates) {
@@ -114,10 +115,15 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { dbUser, res } = await requireAuth()
+    const { dbUser, res } = await requireAuthWithDB(req)
     if (res) return res
 
     const { id } = await params
+    let cancelReason: string | null = null
+    try {
+      const body = await req.json()
+      cancelReason = body?.reason || null
+    } catch {}
 
     const booking = await prisma.booking.findUnique({
       where: { id }
@@ -137,16 +143,32 @@ export async function DELETE(
       )
     }
 
-    if (booking.status === "confirmed") {
+    if (booking.status === "completed") {
       return NextResponse.json(
-        { error: "Невозможно отменить подтверждённое бронирование. Свяжитесь с диспетчером." },
+        { error: "Невозможно отменить завершённое бронирование" },
+        { status: 400 }
+      )
+    }
+
+    if (booking.status === "cancelled") {
+      return NextResponse.json(
+        { error: "Бронирование уже отменено" },
         { status: 400 }
       )
     }
 
     await prisma.booking.update({
       where: { id },
-      data: { status: "cancelled" }
+      data: { status: "cancelled", cancelReason }
+    })
+
+    await logBookingAudit({
+      bookingId: id,
+      action: "user_cancel",
+      oldStatus: booking.status,
+      newStatus: "cancelled",
+      performedBy: dbUser.phone,
+      details: cancelReason || undefined,
     })
 
     return NextResponse.json({ success: true, message: "Бронирование отменено" })

@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/useAuth"
 import PriceCalculator from "./components/PriceCalculator"
 
@@ -31,22 +32,29 @@ const faqItems = [
   }
 ]
 
-const reviews = [
+interface Review {
+  id: string
+  name: string
+  text: string
+  rating: number
+}
+
+const fallbackReviews: Review[] = [
   {
+    id: "1",
     name: "Алексей М.",
-    route: "Аэропорт Симферополь → Ялта",
     text: "Отличный сервис! Водитель встретил в аэропорту с табличкой, машина чистая и комфортная. Доехали быстро, несмотря на сезон.",
     rating: 5
   },
   {
+    id: "2",
     name: "Елена К.",
-    route: "Севастополь → Аэропорт",
     text: "Пользуюсь сервисом второй раз. Всё чётко, водители вежливые. Цена как обещали — без доплат. Рекомендую!",
     rating: 5
   },
   {
+    id: "3",
     name: "Дмитрий П.",
-    route: "Аэропорт → Алушта",
     text: "Забронировал для семьи с двумя детьми. Водитель помог с багажом, посадил детей в автокресло. Очень довольны!",
     rating: 5
   }
@@ -54,6 +62,16 @@ const reviews = [
 
 export default function Home() {
   const { user } = useAuth()
+  const [reviews, setReviews] = useState<Review[]>(fallbackReviews)
+
+  useEffect(() => {
+    fetch("/api/reviews")
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) setReviews(data)
+      })
+      .catch(() => {})
+  }, [])
 
   return (
     <div className="min-h-screen">
@@ -168,7 +186,6 @@ export default function Home() {
                 <p className="text-gray-700 mb-4 text-sm leading-relaxed">{review.text}</p>
                 <div className="border-t pt-3">
                   <p className="font-semibold text-sm">{review.name}</p>
-                  <p className="text-xs text-[#8B7355]">{review.route}</p>
                 </div>
               </div>
             ))}

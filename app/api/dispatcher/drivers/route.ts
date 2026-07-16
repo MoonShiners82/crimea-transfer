@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma"
 
 export async function GET() {
   try {
-    const { res } = await requireRole(["admin", "dispatcher"])
+    const { res } = requireRole(["admin", "dispatcher"])
     if (res) return res
 
     const drivers = await prisma.driver.findMany({
