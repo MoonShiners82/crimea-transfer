@@ -113,11 +113,13 @@ export default function DispatcherPage() {
     }
   }, [authStatus])
 
-  const fetchBookings = async () => {
+  const fetchBookings = async (statusOverride?: string, searchOverride?: string) => {
     try {
+      const activeStatus = statusOverride !== undefined ? statusOverride : filterStatus
+      const activeSearch = searchOverride !== undefined ? searchOverride : searchQuery
       const params = new URLSearchParams()
-      if (filterStatus) params.set("status", filterStatus)
-      if (searchQuery) params.set("search", searchQuery)
+      if (activeStatus) params.set("status", activeStatus)
+      if (activeSearch) params.set("search", activeSearch)
       const res = await fetch(`/api/dispatcher/bookings${params.toString() ? `?${params.toString()}` : ""}`)
       if (res.status === 403) { router.push("/"); return }
       if (res.ok) {
@@ -292,13 +294,13 @@ export default function DispatcherPage() {
 
         <div className="flex flex-wrap gap-2 mb-6">
           {statusOptions.map((opt) => (
-            <button key={opt.value} onClick={() => { setFilterStatus(opt.value); setLoading(true); fetchBookings() }}
+            <button key={opt.value} onClick={() => { setFilterStatus(opt.value); setLoading(true); fetchBookings(opt.value) }}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition ${filterStatus === opt.value ? "bg-[#E8A838] text-[#1A2332]" : "bg-white text-[#1A2332] hover:bg-gray-100 border border-[#B8D4E3]"}`}>
               {opt.label}
             </button>
           ))}
           <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { setLoading(true); fetchBookings() } }}
+            onKeyDown={(e) => { if (e.key === "Enter") { setLoading(true); fetchBookings(undefined, searchQuery) } }}
             placeholder="Поиск по телефону, имени, маршруту..." className="ml-auto px-4 py-2 border border-[#B8D4E3] rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-[#2D6A8F] bg-white" />
         </div>
 
