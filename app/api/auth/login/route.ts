@@ -44,8 +44,8 @@ export async function POST(req: Request) {
     return NextResponse.json({
       user: { id: user.id, phone: user.phone, name: user.name, role: user.role }
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error("Login error:", error)
-    return NextResponse.json({ error: "Server error" }, { status: 500 })
+    return NextResponse.json({ error: error?.message || "Server error" }, { status: 500 })
   }
 }
