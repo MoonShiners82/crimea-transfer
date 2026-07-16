@@ -1,7 +1,11 @@
 import { SignJWT, jwtVerify, type JWTPayload } from "jose"
 import { cookies } from "next/headers"
 
-const secret = new TextEncoder().encode(process.env.JWT_SECRET)
+const JWT_SECRET_RAW = process.env.JWT_SECRET
+if (!JWT_SECRET_RAW) {
+  throw new Error("JWT_SECRET environment variable is not set. Add it in Vercel Settings > Environment Variables.")
+}
+const secret = new TextEncoder().encode(JWT_SECRET_RAW)
 
 const ACCESS_COOKIE = "token"
 const REFRESH_COOKIE = "refresh_token"
