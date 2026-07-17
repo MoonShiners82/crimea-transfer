@@ -35,6 +35,33 @@ export async function POST(req: Request) {
   }
 }
 
+export async function PUT(req: Request) {
+  try {
+    const { res } = requireRole("admin", req)
+    if (res) return res
+
+    const { id, name, phone, carInfo, licensePlate, carPhotoUrl, comments, isActive } = await req.json()
+    if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 })
+
+    const driver = await prisma.driver.update({
+      where: { id },
+      data: {
+        ...(name !== undefined && { name }),
+        ...(phone !== undefined && { phone }),
+        ...(carInfo !== undefined && { carInfo }),
+        ...(licensePlate !== undefined && { licensePlate: licensePlate || null }),
+        ...(carPhotoUrl !== undefined && { carPhotoUrl: carPhotoUrl || null }),
+        ...(comments !== undefined && { comments: comments || null }),
+        ...(isActive !== undefined && { isActive }),
+      }
+    })
+    return NextResponse.json(driver)
+  } catch (error) {
+    console.error("Update driver error:", error)
+    return NextResponse.json({ error: "Server error" }, { status: 500 })
+  }
+}
+
 export async function DELETE(req: Request) {
   try {
     const { res } = requireRole("admin", req)

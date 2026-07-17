@@ -6,6 +6,7 @@ import Link from "next/link"
 import { useToast } from "../components/Toast"
 import { useAuth } from "@/lib/useAuth"
 import { Skeleton, TableSkeleton } from "../components/Skeleton"
+import CarSelector from "../components/CarSelector"
 
 type Booking = {
   id: string
@@ -122,6 +123,17 @@ export default function AdminPage() {
   const [newDriverPhone, setNewDriverPhone] = useState("")
   const [newDriverCar, setNewDriverCar] = useState("")
   const [addingDriver, setAddingDriver] = useState(false)
+
+  // Edit driver modal
+  const [editingDriver, setEditingDriver] = useState<Driver | null>(null)
+  const [editDrvName, setEditDrvName] = useState("")
+  const [editDrvPhone, setEditDrvPhone] = useState("")
+  const [editDrvCar, setEditDrvCar] = useState("")
+  const [editDrvPlate, setEditDrvPlate] = useState("")
+  const [editDrvPhoto, setEditDrvPhoto] = useState<string | null>(null)
+  const [editDrvCarPhoto, setEditDrvCarPhoto] = useState<string | null>(null)
+  const [editDrvComments, setEditDrvComments] = useState("")
+  const [savingDriver, setSavingDriver] = useState(false)
 
   // Loading states
   const [cancellingId, setCancellingId] = useState<string | null>(null)
@@ -347,6 +359,41 @@ export default function AdminPage() {
     } catch { toast("Ошибка удаления", "error") }
   }
 
+  const openEditDriver = (d: Driver) => {
+    setEditingDriver(d)
+    setEditDrvName(d.name)
+    setEditDrvPhone(d.phone)
+    setEditDrvCar(d.carInfo)
+    setEditDrvPlate(d.licensePlate || "")
+    setEditDrvPhoto(d.photoUrl)
+    setEditDrvCarPhoto(d.carPhotoUrl)
+    setEditDrvComments(d.comments || "")
+  }
+
+  const handleSaveDriver = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingDriver) return
+    setSavingDriver(true)
+    try {
+      const res = await fetch("/api/admin/drivers", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editingDriver.id,
+          name: editDrvName,
+          phone: editDrvPhone,
+          carInfo: editDrvCar,
+          licensePlate: editDrvPlate,
+          carPhotoUrl: editDrvCarPhoto,
+          comments: editDrvComments,
+        })
+      })
+      if (res.ok) { setEditingDriver(null); fetchDrivers(); toast("Водитель обновлён", "success") }
+      else toast("Ошибка сохранения", "error")
+    } catch { toast("Ошибка сервера", "error") }
+    finally { setSavingDriver(false) }
+  }
+
   const handleExport = async (format: "csv" | "json") => {
     const params = new URLSearchParams()
     if (filterStatus) params.set("status", filterStatus)
@@ -563,9 +610,11 @@ export default function AdminPage() {
                         <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${d.isActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>{d.isActive ? "Активен" : "Неактивен"}</span></td>
                         <td className="px-4 py-3">
                           <div className="flex gap-1 flex-wrap">
+                            <button onClick={() => openEditDriver(d)}
+                              className="bg-[#2D6A8F] text-white px-2 py-1 rounded text-xs font-medium hover:bg-[#245a7a]">Изменить</button>
                             {d.userId && (
                               <button onClick={() => { setPasswordModalUser({ id: d.userId!, phone: d.phone, name: d.name }); setNewPassword("") }}
-                                className="bg-[#2D6A8F] text-white px-2 py-1 rounded text-xs font-medium hover:bg-[#245a7a]">Пароль</button>
+                                className="bg-gray-200 text-[#1A2332] px-2 py-1 rounded text-xs font-medium hover:bg-gray-300">Пароль</button>
                             )}
                             <button onClick={() => handleDeleteDriver(d.id)} className="text-red-500 hover:text-red-700 text-sm">Удалить</button>
                           </div>
@@ -771,6 +820,49 @@ export default function AdminPage() {
                   {settingPassword ? "Сохранение..." : "Сохранить"}
                 </button>
                 <button type="button" onClick={() => setPasswordModalUser(null)} className="flex-1 bg-gray-200 p-2 rounded-lg font-semibold hover:bg-gray-300">Отмена</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Driver Modal */}
+      {editingDriver && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setEditingDriver(null)}>
+          <div className="bg-white rounded-lg max-w-lg w-full p-6 border border-[#B8D4E3] max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <h2 className="text-xl font-bold mb-4 text-[#1A2332]" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
+              Редактирование водителя
+            </h2>
+            <form onSubmit={handleSaveDriver} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[#1A2332] mb-1">ФИО</label>
+                <input type="text" value={editDrvName} onChange={e => setEditDrvName(e.target.value)} required
+                  className="w-full p-2 border border-[#B8D4E3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2D6A8F]" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#1A2332] mb-1">Телефон</label>
+                <input type="tel" value={editDrvPhone} onChange={e => setEditDrvPhone(e.target.value)} required
+                  className="w-full p-2 border border-[#B8D4E3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2D6A8F]" />
+              </div>
+              <CarSelector value={editDrvCar} onChange={setEditDrvCar} />
+              <div>
+                <label className="block text-sm font-medium text-[#1A2332] mb-1">Гос. номер</label>
+                <input type="text" value={editDrvPlate} onChange={e => setEditDrvPlate(e.target.value.toUpperCase())}
+                  placeholder="А123БВ777"
+                  className="w-full p-2 border border-[#B8D4E3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2D6A8F]" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#1A2332] mb-1">Комментарий</label>
+                <textarea value={editDrvComments} onChange={e => setEditDrvComments(e.target.value)} rows={2}
+                  className="w-full p-2 border border-[#B8D4E3] rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#2D6A8F]" />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button type="submit" disabled={savingDriver}
+                  className="flex-1 bg-[#E8A838] text-[#1A2332] p-2 rounded-lg font-semibold hover:bg-[#d49a30] disabled:opacity-50">
+                  {savingDriver ? "Сохранение..." : "Сохранить"}
+                </button>
+                <button type="button" onClick={() => setEditingDriver(null)}
+                  className="flex-1 bg-gray-200 p-2 rounded-lg font-semibold hover:bg-gray-300">Отмена</button>
               </div>
             </form>
           </div>
