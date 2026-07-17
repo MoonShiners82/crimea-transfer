@@ -40,7 +40,7 @@ export async function PUT(req: Request) {
     const { res } = requireRole("admin", req)
     if (res) return res
 
-    const { id, name, phone, carInfo, licensePlate, photoUrl, carPhotoUrl, comments, isActive } = await req.json()
+    const { id, name, phone, carInfo, licensePlate, photoUrl, carPhotoUrl, comments, isActive, carClasses } = await req.json()
     if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 })
 
     const driver = await prisma.driver.update({
@@ -54,6 +54,7 @@ export async function PUT(req: Request) {
         ...(carPhotoUrl !== undefined && { carPhotoUrl: carPhotoUrl || null }),
         ...(comments !== undefined && { comments: comments || null }),
         ...(isActive !== undefined && { isActive }),
+        ...(carClasses !== undefined && { carClasses: Array.isArray(carClasses) ? carClasses.join(",") : carClasses }),
       }
     })
     return NextResponse.json(driver)

@@ -236,6 +236,23 @@ export default function DispatcherPage() {
     finally { setEditing(false) }
   }
 
+  const handleStatus = async (bookingId: string, newStatus: string) => {
+    const labels: Record<string, string> = { pending: "В ожидание", confirmed: "Подтвердить", in_progress: "В путь", completed: "Завершить", cancelled: "Отменить" }
+    if (!confirm(`Изменить статус на "${labels[newStatus] || newStatus}"?`)) return
+    try {
+      const res = await fetch("/api/admin/bookings/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId, status: newStatus })
+      })
+      if (res.ok) { fetchBookings(); fetchStats(); toast("Статус обновлён", "success") }
+      else {
+        const data = await res.json()
+        toast(data.error || "Ошибка смены статуса", "error")
+      }
+    } catch { toast("Ошибка сервера", "error") }
+  }
+
   const handleCancel = async (bookingId: string) => {
     if (!confirm("Отменить бронирование?")) return
     setCancellingId(bookingId)
@@ -383,6 +400,10 @@ export default function DispatcherPage() {
                         {b.status === "pending" && (
                           <button onClick={() => { setSelectedBooking(b); setPriceFinal(b.priceCalculated.toString()) }}
                             className="bg-[#E8A838] text-[#1A2332] px-2 py-1 rounded text-xs font-medium hover:bg-[#d49a30]">Назначить</button>
+                        )}
+                        {b.status === "confirmed" && (
+                          <button onClick={() => handleStatus(b.id, "pending")}
+                            className="bg-yellow-500 text-white px-2 py-1 rounded text-xs font-medium hover:bg-yellow-600">В ожидание</button>
                         )}
                         {(b.status === "pending" || b.status === "confirmed") && (
                           <button onClick={() => openEdit(b)}

@@ -61,3 +61,5 @@ stdout.log
 # scripts (debug/test)
 scripts/debug-*.ts
 scripts/test-*.ts
+
+.vercel

@@ -1,25 +1,26 @@
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import { Inter, Cormorant_Garamond } from "next/font/google"
 import "./globals.css"
 import { Providers } from "./providers"
 import Navigation from "./components/Navigation"
 import Footer from "./components/Footer"
 
 const inter = Inter({ subsets: ["latin", "cyrillic"] })
+const cormorant = Cormorant_Garamond({ subsets: ["latin", "cyrillic"], weight: ["400", "600", "700"] })
 
 export const metadata: Metadata = {
   title: {
-    default: "КрымТрансфер — Трансферы из аэропорта Симферополя | Заказать трансфер по Крыму",
-    template: "%s | КрымТрансфер",
+    default: "Поехали в Крым — Трансферы из аэропорта Симферополя | Заказать трансфер по Крыму",
+    template: "%s | Поехали в Крым",
   },
   description: "Бронирование комфортного трансфера из аэропорта Симферополя в Ялту, Алушту, Севастополь, Феодосию и другие города Крыма. Фиксированные цены, современные автомобили, опытные водители.",
   keywords: ["трансфер Крым", "трансфер аэропорт Симферополь", "трансфер Ялта", "трансфер Алушта", "трансфер Севастополь", "заказать трансфер", "перевозки Крым"],
-  authors: [{ name: "КрымТрансфер" }],
+  authors: [{ name: "Поехали в Крым" }],
   openGraph: {
     type: "website",
     locale: "ru_RU",
-    siteName: "КрымТрансфер",
-    title: "КрымТрансфер — Трансферы из аэропорта Симферополя",
+    siteName: "Поехали в Крым",
+    title: "Поехали в Крым — Трансферы из аэропорта Симферополя",
     description: "Бронирование комфортного трансфера из аэропорта Симферополя в любой точке Крыма. Фиксированные цены, современные автомобили.",
   },
 }
@@ -38,7 +39,7 @@ export default function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "LocalBusiness",
-              name: "КрымТрансфер",
+              name: "Поехали в Крым",
               description: "Трансферы из аэропорта Симферополя по всему Крыму",
               url: "https://togocrimea.ru",
               telephone: "+79380961205",

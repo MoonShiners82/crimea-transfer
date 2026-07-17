@@ -78,8 +78,8 @@ export default function Home() {
       {/* Hero Section */}
       <section className="relative bg-gradient-to-b from-[#1A2332] via-[#2D6A8F] to-[#B8D4E3] text-white py-20 md:py-32">
         <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl md:text-6xl font-bold mb-4 tracking-tight" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
-            Трансфер по Крыму
+          <h1 className="text-4xl md:text-6xl font-bold mb-4 tracking-tight" style={{ fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
+            Поехали в Крым
           </h1>
           <p className="text-lg md:text-xl text-white/80 mb-8 max-w-xl mx-auto">
             Комфортные поездки в любую точку полуострова

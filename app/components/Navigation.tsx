@@ -10,8 +10,8 @@ export default function Navigation() {
     <nav className="bg-[#1A2332] text-white">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
-          <Link href="/" className="text-xl font-bold" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
-            <span className="text-[#E8A838]">Крым</span>Трансфер
+          <Link href="/" className="text-xl font-bold" style={{ fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
+            <span className="text-[#E8A838]">Поехали</span> в Крым
           </Link>
 
           <div className="flex items-center gap-4">

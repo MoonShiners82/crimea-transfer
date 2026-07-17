@@ -5,7 +5,7 @@ export default function Footer() {
     <footer className="bg-[#1A2332] text-white/60">
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm">
-          <p>&copy; {new Date().getFullYear()} КрымТрансфер</p>
+          <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif" }}>&copy; {new Date().getFullYear()} <span className="text-[#E8A838]">Поехали</span> в Крым</p>
           <div className="flex gap-4">
             <Link href="/auth/login" className="hover:text-white transition">
               Войти

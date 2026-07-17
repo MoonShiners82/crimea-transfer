@@ -14,7 +14,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "bookingId и status обязательны" }, { status: 400 })
     }
 
-    const allowedStatuses = ["confirmed", "in_progress", "completed", "cancelled"]
+    const allowedStatuses = ["pending", "confirmed", "in_progress", "completed", "cancelled"]
     if (!allowedStatuses.includes(status)) {
       return NextResponse.json({ error: "Недопустимый статус" }, { status: 400 })
     }
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
 
     const validTransitions: Record<string, string[]> = {
       pending: ["confirmed", "cancelled"],
-      confirmed: ["in_progress", "completed", "cancelled"],
+      confirmed: ["pending", "in_progress", "completed", "cancelled"],
       in_progress: ["completed", "cancelled"]
     }
 
@@ -42,6 +42,10 @@ export async function POST(req: Request) {
 
     if (status === "confirmed") {
       updateData.confirmedAt = new Date()
+    }
+
+    if (status === "pending") {
+      updateData.confirmedAt = null
     }
 
     if (status === "cancelled" && reason) {

@@ -294,21 +294,7 @@ export default function BookingPage() {
               <p className="text-xs text-amber-600">Маршрут не найден в базе расстояний</p>
             )}
 
-            {/* Or select from ready routes */}
-            {!fromCity && !toCity && routes.length > 0 && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Или выберите из готовых маршрутов
-                </label>
-                <select value={selectedRouteId} onChange={e => setSelectedRouteId(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                  <option value="">Не выбран</option>
-                  {routes.map(r => (
-                    <option key={r.id} value={r.id}>{r.fromPoint} → {r.toPoint} ({r.distanceKm} км)</option>
-                  ))}
-                </select>
-              </div>
-            )}
+            {/* Route info shown after city selection */}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Дата и время вылета</label>
