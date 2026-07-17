@@ -16,6 +16,7 @@ export default function LoginPage() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const [checking, setChecking] = useState(false)
+  const [timeLeft, setTimeLeft] = useState(0)
 
   const handleVerify = useCallback(async () => {
     if (!key) return
@@ -50,18 +51,28 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (step !== "call" || !key) return
-    let elapsed = 0
-    const MAX_POLL_MS = 3 * 60 * 1000
-    const interval = setInterval(() => {
-      elapsed += 3000
-      if (elapsed > MAX_POLL_MS) {
-        clearInterval(interval)
+    const MAX_POLL_SEC = 5 * 60
+    let remaining = MAX_POLL_SEC
+    setTimeLeft(remaining)
+
+    const tickInterval = setInterval(() => {
+      remaining--
+      setTimeLeft(remaining)
+      if (remaining <= 0) {
+        clearInterval(tickInterval)
+        clearInterval(pollInterval)
         setError("Время ожидания истекло. Попробуйте получить новый номер.")
-        return
       }
+    }, 1000)
+
+    const pollInterval = setInterval(() => {
       handleVerify()
     }, 3000)
-    return () => clearInterval(interval)
+
+    return () => {
+      clearInterval(tickInterval)
+      clearInterval(pollInterval)
+    }
   }, [step, key, handleVerify])
 
   const handleSendCode = async (e: React.FormEvent) => {
@@ -170,6 +181,11 @@ export default function LoginPage() {
               <p className="text-xs text-[#8B7355] mt-2">
                 Звонок бесплатный. Код подтверждения не требуется.
               </p>
+              {timeLeft > 0 && (
+                <p className="text-sm text-[#2D6A8F] mt-3 font-medium">
+                  Осталось {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, "0")}
+                </p>
+              )}
             </div>
 
             {message && <p className="text-sm text-green-600 text-center">{message}</p>}
