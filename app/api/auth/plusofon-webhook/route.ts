@@ -1,29 +1,50 @@
 import { NextResponse } from "next/server"
 import { markVerified } from "@/lib/verification-store"
 
+export async function GET() {
+  console.log("Plusofon webhook GET - health check")
+  return NextResponse.json({ success: true })
+}
+
 export async function POST(req: Request) {
+  const timestamp = new Date().toISOString()
+  
   try {
-    const body = await req.json()
+    const contentType = req.headers.get("content-type") || ""
+    let key: string | undefined
+    let phone: string | undefined
+    let rawBody: string
 
-    console.log("Plusofon webhook received:", JSON.stringify(body))
+    if (contentType.includes("application/json")) {
+      const body = await req.json()
+      rawBody = JSON.stringify(body)
+      key = body?.key as string | undefined
+      phone = body?.phone as string | undefined
+    } else {
+      rawBody = await req.text()
+      const params = new URLSearchParams(rawBody)
+      key = params.get("key") || undefined
+      phone = params.get("phone") || undefined
+    }
 
-    const key = body?.key as string | undefined
+    console.log(`[${timestamp}] WEBHOOK RECEIVED:`, rawBody)
+
     if (!key) {
-      console.error("No key in webhook payload:", body)
-      return NextResponse.json({ error: "No key" }, { status: 400 })
+      console.error(`[${timestamp}] No key in webhook. Raw:`, rawBody)
+      return NextResponse.json({ success: false, error: "No key" }, { status: 400 })
     }
 
     const marked = await markVerified(key)
     if (!marked) {
-      console.warn(`Key not found or expired: ${key}`)
+      console.warn(`[${timestamp}] Key not found or expired: ${key}`)
     } else {
-      console.log(`Key verified: ${key}`)
+      console.log(`[${timestamp}] Key verified: ${key}, phone: ${phone}`)
     }
 
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Webhook error"
-    console.error("Plusofon webhook error:", msg)
+    console.error(`[${timestamp}] Webhook error:`, msg)
     return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
