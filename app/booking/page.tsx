@@ -54,7 +54,7 @@ export default function BookingPage() {
   const [routes, setRoutes] = useState<Route[]>([])
   const [carClasses, setCarClasses] = useState<CarClass[]>(defaultCarClasses)
   const [pricePerKm, setPricePerKm] = useState(25)
-  const [routeId, setRouteId] = useState("")
+  const [selectedRouteId, setSelectedRouteId] = useState("")
   const [datetime, setDatetime] = useState("")
   const [passengers, setPassengers] = useState(1)
   const [baggage, setBaggage] = useState("none")
@@ -68,8 +68,7 @@ export default function BookingPage() {
   const [acceptMarketing, setAcceptMarketing] = useState(false)
   const [notes, setNotes] = useState("")
 
-  // Custom route state
-  const [isCustomRoute, setIsCustomRoute] = useState(false)
+  // City selection
   const [distanceData, setDistanceData] = useState<DistanceData | null>(null)
   const [fromCity, setFromCity] = useState("")
   const [toCity, setToCity] = useState("")
@@ -79,9 +78,7 @@ export default function BookingPage() {
   const [showToDropdown, setShowToDropdown] = useState(false)
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/auth/signin")
-    }
+    if (status === "unauthenticated") router.push("/auth/signin")
   }, [status, router])
 
   useEffect(() => {
@@ -102,9 +99,9 @@ export default function BookingPage() {
   }, [])
 
   const customDistance = useMemo(() => {
-    if (!isCustomRoute || !distanceData || !fromCity || !toCity || fromCity === toCity) return null
+    if (!distanceData || !fromCity || !toCity || fromCity === toCity) return null
     return getDistance(distanceData.cities, distanceData.distances, fromCity, toCity)
-  }, [isCustomRoute, distanceData, fromCity, toCity])
+  }, [distanceData, fromCity, toCity])
 
   const customPrice = useMemo(() => {
     if (customDistance === null) return 0
@@ -122,34 +119,39 @@ export default function BookingPage() {
   }, [customDistance, pricePerKm, carClass, carClasses, passengers, baggage, datetime])
 
   useEffect(() => {
-    if (!isCustomRoute && routeId) {
+    if (selectedRouteId) {
       fetch("/api/calculate-price", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ routeId, passengers, baggage, datetime, carClass })
+        body: JSON.stringify({ routeId: selectedRouteId, passengers, baggage, datetime, carClass })
       })
         .then(res => res.json())
         .then(data => setPrice(data.price || 0))
     }
-  }, [routeId, passengers, baggage, datetime, carClass, isCustomRoute])
+  }, [selectedRouteId, passengers, baggage, datetime, carClass])
 
   useEffect(() => {
-    if (isCustomRoute) {
+    if (fromCity && toCity && fromCity !== toCity) {
       setPrice(customPrice)
     }
-  }, [isCustomRoute, customPrice])
+  }, [customPrice, fromCity, toCity])
 
   const filteredFromCities = useMemo(() => {
     if (!distanceData) return []
     const q = fromSearch.toLowerCase()
-    return distanceData.cities.filter(c => c.toLowerCase().includes(q) && c !== toCity)
+    return q ? distanceData.cities.filter(c => c.toLowerCase().includes(q) && c !== toCity)
+             : distanceData.cities.filter(c => c !== toCity)
   }, [distanceData, fromSearch, toCity])
 
   const filteredToCities = useMemo(() => {
     if (!distanceData) return []
     const q = toSearch.toLowerCase()
-    return distanceData.cities.filter(c => c.toLowerCase().includes(q) && c !== fromCity)
+    return q ? distanceData.cities.filter(c => c.toLowerCase().includes(q) && c !== fromCity)
+             : distanceData.cities.filter(c => c !== fromCity)
   }, [distanceData, toSearch, fromCity])
+
+  const hasRoute = selectedRouteId || (fromCity && toCity && fromCity !== toCity)
+  const selectedRoute = routes.find(r => r.id === selectedRouteId)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -165,13 +167,13 @@ export default function BookingPage() {
         priceCalculated: price,
       }
 
-      if (isCustomRoute) {
+      if (fromCity && toCity && fromCity !== toCity) {
         body.fromPoint = fromCity
         body.toPoint = toCity
         body.distanceKm = customDistance
         body.durationMin = customDistance ? estimateDuration(customDistance) : null
-      } else {
-        body.routeId = routeId
+      } else if (selectedRouteId) {
+        body.routeId = selectedRouteId
       }
 
       const res = await fetch("/api/bookings", {
@@ -193,8 +195,6 @@ export default function BookingPage() {
       setLoading(false)
     }
   }
-
-  const selectedRoute = routes.find(r => r.id === routeId)
 
   const minDate = new Date()
   minDate.setHours(minDate.getHours() + 2)
@@ -227,99 +227,92 @@ export default function BookingPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Route Type Toggle */}
-            <div className="flex gap-2 mb-2">
-              <button type="button" onClick={() => { setIsCustomRoute(false); setRouteId("") }}
-                className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${!isCustomRoute ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
-                Готовые маршруты
-              </button>
-              <button type="button" onClick={() => { setIsCustomRoute(true); setRouteId("") }}
-                className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${isCustomRoute ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
-                Свой маршрут
-              </button>
+            {/* FROM */}
+            <div className="relative">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Откуда</label>
+              <input
+                type="text"
+                value={fromCity || fromSearch}
+                onChange={e => { setFromSearch(e.target.value); setFromCity(""); setSelectedRouteId(""); setShowFromDropdown(true) }}
+                onFocus={() => setShowFromDropdown(true)}
+                placeholder="Город отправления"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+              />
+              {showFromDropdown && filteredFromCities.length > 0 && (
+                <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {filteredFromCities.map(c => (
+                    <button key={c} type="button"
+                      onMouseDown={() => { setFromCity(c); setFromSearch(""); setShowFromDropdown(false); setSelectedRouteId("") }}
+                      className="w-full text-left px-4 py-2 text-sm hover:bg-blue-50">{c}</button>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {!isCustomRoute ? (
+            {/* TO */}
+            <div className="relative">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Куда</label>
+              <input
+                type="text"
+                value={toCity || toSearch}
+                onChange={e => { setToSearch(e.target.value); setToCity(""); setSelectedRouteId(""); setShowToDropdown(true) }}
+                onFocus={() => setShowToDropdown(true)}
+                placeholder="Город назначения"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+              />
+              {showToDropdown && filteredToCities.length > 0 && (
+                <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {filteredToCities.map(c => (
+                    <button key={c} type="button"
+                      onMouseDown={() => { setToCity(c); setToSearch(""); setShowToDropdown(false); setSelectedRouteId("") }}
+                      className="w-full text-left px-4 py-2 text-sm hover:bg-blue-50">{c}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {fromCity && toCity && fromCity === toCity && (
+              <p className="text-xs text-red-500 -mt-2">Города должны отличаться</p>
+            )}
+
+            {fromCity && toCity && fromCity !== toCity && customDistance !== null && (
+              <div className="bg-blue-50 p-3 rounded-lg text-sm space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Расстояние:</span>
+                  <span className="font-medium">{customDistance} км</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Время в пути:</span>
+                  <span className="font-medium">~{estimateDuration(customDistance)} мин</span>
+                </div>
+              </div>
+            )}
+
+            {fromCity && toCity && fromCity !== toCity && customDistance === null && (
+              <p className="text-xs text-amber-600">Маршрут не найден в базе расстояний</p>
+            )}
+
+            {/* Or select from ready routes */}
+            {!fromCity && !toCity && routes.length > 0 && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Маршрут</label>
-                <select value={routeId} onChange={(e) => setRouteId(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-                  <option value="">Выберите маршрут</option>
-                  {routes.map(route => (
-                    <option key={route.id} value={route.id}>
-                      {route.fromPoint} → {route.toPoint}
-                    </option>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Или выберите из готовых маршрутов
+                </label>
+                <select value={selectedRouteId} onChange={e => setSelectedRouteId(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                  <option value="">Не выбран</option>
+                  {routes.map(r => (
+                    <option key={r.id} value={r.id}>{r.fromPoint} → {r.toPoint} ({r.distanceKm} км)</option>
                   ))}
                 </select>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {/* From City */}
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Откуда</label>
-                  <input type="text" value={fromCity || fromSearch}
-                    onChange={e => { setFromSearch(e.target.value); setFromCity(""); setShowFromDropdown(true) }}
-                    onFocus={() => setShowFromDropdown(true)}
-                    onBlur={() => setTimeout(() => setShowFromDropdown(false), 200)}
-                    placeholder="Введите город..." required
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
-                  {showFromDropdown && !fromCity && filteredFromCities.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                      {filteredFromCities.map(c => (
-                        <button key={c} type="button"
-                          onMouseDown={() => { setFromCity(c); setFromSearch(""); setShowFromDropdown(false) }}
-                          className="w-full text-left px-4 py-2 text-sm hover:bg-blue-50 transition">{c}</button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* To City */}
-                <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Куда</label>
-                  <input type="text" value={toCity || toSearch}
-                    onChange={e => { setToSearch(e.target.value); setToCity(""); setShowToDropdown(true) }}
-                    onFocus={() => setShowToDropdown(true)}
-                    onBlur={() => setTimeout(() => setShowToDropdown(false), 200)}
-                    placeholder="Введите город..." required
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
-                  {showToDropdown && !toCity && filteredToCities.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                      {filteredToCities.map(c => (
-                        <button key={c} type="button"
-                          onMouseDown={() => { setToCity(c); setToSearch(""); setShowToDropdown(false) }}
-                          className="w-full text-left px-4 py-2 text-sm hover:bg-blue-50 transition">{c}</button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {fromCity && toCity && fromCity === toCity && (
-                  <p className="text-xs text-red-500">Города отправления и назначения должны отличаться</p>
-                )}
-
-                {fromCity && toCity && fromCity !== toCity && customDistance !== null && (
-                  <div className="bg-blue-50 p-3 rounded-lg text-sm space-y-1">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Расстояние:</span>
-                      <span className="font-medium">{customDistance} км</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Время в пути:</span>
-                      <span className="font-medium">~{estimateDuration(customDistance)} мин</span>
-                    </div>
-                  </div>
-                )}
-
-                {fromCity && toCity && fromCity !== toCity && customDistance === null && (
-                  <p className="text-xs text-amber-600">Маршрут не найден в базе расстояний</p>
-                )}
               </div>
             )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Дата и время вылета</label>
-              <input type="datetime-local" value={datetime} onChange={(e) => setDatetime(e.target.value)}
+              <input type="datetime-local" value={datetime} onChange={e => setDatetime(e.target.value)}
                 min={minDateString}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required />
               <p className="text-xs text-gray-500 mt-1">Минимум 2 часа от текущего времени</p>
@@ -364,16 +357,16 @@ export default function BookingPage() {
             </div>
 
             {/* Price Summary */}
-            {((!isCustomRoute && selectedRoute) || (isCustomRoute && fromCity && toCity && fromCity !== toCity && customDistance !== null)) && (
+            {hasRoute && (
               <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="flex justify-between items-start mb-2">
                   <div>
-                    <p className="font-medium">{isCustomRoute ? fromCity : selectedRoute?.fromPoint}</p>
-                    <p className="text-gray-500 text-sm">→ {isCustomRoute ? toCity : selectedRoute?.toPoint}</p>
+                    <p className="font-medium">{fromCity || selectedRoute?.fromPoint}</p>
+                    <p className="text-gray-500 text-sm">→ {toCity || selectedRoute?.toPoint}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-gray-500">{isCustomRoute ? customDistance : selectedRoute?.distanceKm} км</p>
-                    <p className="text-sm text-gray-500">~{isCustomRoute ? estimateDuration(customDistance!) : selectedRoute?.durationMin} мин</p>
+                    <p className="text-sm text-gray-500">{customDistance || selectedRoute?.distanceKm} км</p>
+                    <p className="text-sm text-gray-500">~{customDistance ? estimateDuration(customDistance) : selectedRoute?.durationMin} мин</p>
                   </div>
                 </div>
                 <div className="text-xs text-gray-500 mb-2">
@@ -390,34 +383,34 @@ export default function BookingPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Комментарий к заявке <span className="text-gray-400">(необязательно)</span>
+                Комментарий <span className="text-gray-400">(необязательно)</span>
               </label>
-              <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
+              <textarea value={notes} onChange={e => setNotes(e.target.value)}
                 placeholder="Особые пожелания, время встречи, номер рейса..."
                 className="w-full p-3 border border-gray-300 rounded-lg text-sm resize-none" rows={3} maxLength={500} />
             </div>
 
             <div className="space-y-3 pt-2">
               <label className="flex items-start gap-3 cursor-pointer">
-                <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)}
+                <input type="checkbox" checked={acceptTerms} onChange={e => setAcceptTerms(e.target.checked)}
                   className="mt-0.5 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" required />
                 <span className="text-sm text-gray-600">
-                  Я принимаю условия <a href="/terms" target="_blank" className="text-blue-600 hover:underline">Пользовательского соглашения (оферты)</a>
+                  Я принимаю условия <a href="/terms" target="_blank" className="text-blue-600 hover:underline">Пользовательского соглашения</a>
                 </span>
               </label>
               <label className="flex items-start gap-3 cursor-pointer">
-                <input type="checkbox" checked={acceptPersonalData} onChange={(e) => setAcceptPersonalData(e.target.checked)}
+                <input type="checkbox" checked={acceptPersonalData} onChange={e => setAcceptPersonalData(e.target.checked)}
                   className="mt-0.5 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" required />
                 <span className="text-sm text-gray-600">Я даю согласие на обработку персональных данных</span>
               </label>
               <label className="flex items-start gap-3 cursor-pointer">
-                <input type="checkbox" checked={acceptMarketing} onChange={(e) => setAcceptMarketing(e.target.checked)}
+                <input type="checkbox" checked={acceptMarketing} onChange={e => setAcceptMarketing(e.target.checked)}
                   className="mt-0.5 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
                 <span className="text-sm text-gray-600">Я согласен на получение рекламных материалов</span>
               </label>
             </div>
 
-            <button type="submit" disabled={loading || (!routeId && !isCustomRoute) || (isCustomRoute && (!fromCity || !toCity || fromCity === toCity)) || !datetime || !acceptTerms || !acceptPersonalData}
+            <button type="submit" disabled={loading || !hasRoute || !datetime || !acceptTerms || !acceptPersonalData}
               className="w-full bg-blue-600 text-white p-4 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition">
               {loading ? (
                 <span className="flex items-center justify-center gap-2">

@@ -56,6 +56,8 @@ type Route = {
   fromPoint: string
   toPoint: string
   priceBase: number
+  distanceKm: number
+  pricePerBaggage: number
 }
 
 const statusOptions = [
@@ -117,6 +119,15 @@ export default function AdminPage() {
   const [editCarInfo, setEditCarInfo] = useState("")
   const [editRouteId, setEditRouteId] = useState("")
   const [editing, setEditing] = useState(false)
+  const [editNewPrice, setEditNewPrice] = useState<number | null>(null)
+  const [editPriceMode, setEditPriceMode] = useState<"keep" | "new">("keep")
+
+  // Settings for price recalc
+  const [pricePerKm, setPricePerKm] = useState(25)
+  const [carClassCoeffs, setCarClassCoeffs] = useState<{ id: string; coefficient: number }[]>([
+    { id: "economy", coefficient: 0.8 },
+    { id: "comfort", coefficient: 1.0 },
+  ])
 
   // Driver modal
   const [showDriverModal, setShowDriverModal] = useState(false)
@@ -321,8 +332,34 @@ export default function AdminPage() {
         fetchRoutes(),
         fetchAdjustments()
       ]).finally(() => setLoading(false))
+      fetch("/api/settings").then(r => r.json()).then(data => {
+        if (data.pricePerKm) setPricePerKm(data.pricePerKm)
+        if (data.carClasses?.length) setCarClassCoeffs(data.carClasses)
+      }).catch(() => {})
     }
   }, [authStatus])
+
+  useEffect(() => {
+    if (!editingBooking || !editRouteId || editRouteId === editingBooking.route?.id) {
+      setEditNewPrice(null)
+      setEditPriceMode("keep")
+      return
+    }
+    const route = routes.find(r => r.id === editRouteId)
+    if (!route) return
+
+    const coeff = carClassCoeffs.find(c => c.id === (editingBooking.carClass || "comfort"))?.coefficient || 1.0
+    let p = Math.round(route.distanceKm * pricePerKm * coeff)
+    if (editingBooking.passengers > 4) p += (editingBooking.passengers - 4) * 300
+    if (editingBooking.baggageType === "1") p += route.pricePerBaggage
+    if (editingBooking.baggageType === "2plus") p += route.pricePerBaggage * 2
+    if (editingBooking.baggageType === "oversized") p += route.pricePerBaggage * 3
+    if (editingBooking.datetime) {
+      const hour = new Date(editingBooking.datetime).getHours()
+      if (hour >= 23 || hour < 6) p = Math.round(p * 1.2)
+    }
+    setEditNewPrice(p)
+  }, [editRouteId, editingBooking, routes, pricePerKm, carClassCoeffs])
 
   const handleConfirm = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -344,13 +381,14 @@ export default function AdminPage() {
     e.preventDefault()
     if (!editingBooking) return
     setEditing(true)
+    const finalPrice = editNewPrice && editPriceMode === "new" ? editNewPrice : parseInt(editPrice) || undefined
     try {
       const res = await fetch("/api/admin/bookings/edit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           bookingId: editingBooking.id,
-          priceFinal: parseInt(editPrice) || undefined,
+          priceFinal: finalPrice,
           driverName: editDriver || undefined,
           driverPhone: editDriverPhone || undefined,
           carInfo: editCarInfo || undefined,
@@ -590,7 +628,7 @@ export default function AdminPage() {
                               </button>
                             )}
                             {b.status !== "cancelled" && (
-                              <button onClick={() => { setEditingBooking(b); setEditPrice((b.priceFinal || b.priceCalculated).toString()); setEditDriver(b.driverName || ""); setEditDriverPhone(b.driverPhone || ""); setEditCarInfo(b.carInfo || ""); setEditRouteId(b.route?.id || "") }}
+                              <button onClick={() => { setEditingBooking(b); setEditPrice((b.priceFinal || b.priceCalculated).toString()); setEditDriver(b.driverName || ""); setEditDriverPhone(b.driverPhone || ""); setEditCarInfo(b.carInfo || ""); setEditRouteId(b.route?.id || ""); setEditNewPrice(null); setEditPriceMode("keep") }}
                                 className="bg-gray-200 text-[#1A2332] px-2 py-1 rounded text-xs font-medium hover:bg-gray-300">✏️</button>
                             )}
                           </div>
@@ -887,7 +925,33 @@ export default function AdminPage() {
               <input type="text" placeholder="Имя водителя" value={editDriver} onChange={e => setEditDriver(e.target.value)} className="w-full p-2 border border-[#B8D4E3] rounded-lg" />
               <input type="tel" placeholder="Телефон водителя" value={editDriverPhone} onChange={e => setEditDriverPhone(e.target.value)} className="w-full p-2 border border-[#B8D4E3] rounded-lg" />
               <input type="text" placeholder="Автомобиль" value={editCarInfo} onChange={e => setEditCarInfo(e.target.value)} className="w-full p-2 border border-[#B8D4E3] rounded-lg" />
-              <input type="number" placeholder="Цена (руб)" value={editPrice} onChange={e => setEditPrice(e.target.value)} className="w-full p-2 border border-[#B8D4E3] rounded-lg" required />
+
+              {editNewPrice !== null && (
+                <div className="bg-[#F5F0EB] p-3 rounded-lg space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#8B7355]">Текущая цена:</span>
+                    <span className="font-medium">{editPrice} ₽</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#8B7355]">Новая цена ({routes.find(r => r.id === editRouteId)?.distanceKm} км):</span>
+                    <span className={`font-medium ${editNewPrice > parseInt(editPrice) ? "text-red-600" : "text-green-600"}`}>
+                      {editNewPrice} ₽ ({editNewPrice > parseInt(editPrice) ? "+" : ""}{editNewPrice - parseInt(editPrice)} ₽)
+                    </span>
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button type="button" onClick={() => { setEditPriceMode("keep"); setEditPrice((editingBooking?.priceFinal || editingBooking?.priceCalculated || 0).toString()) }}
+                      className={`flex-1 px-3 py-1.5 rounded text-xs font-medium transition ${editPriceMode === "keep" ? "bg-[#2D6A8F] text-white" : "bg-white border border-[#B8D4E3] text-[#1A2332] hover:bg-gray-50"}`}>
+                      Оставить {editPrice} ₽
+                    </button>
+                    <button type="button" onClick={() => { setEditPriceMode("new"); setEditPrice(editNewPrice.toString()) }}
+                      className={`flex-1 px-3 py-1.5 rounded text-xs font-medium transition ${editPriceMode === "new" ? "bg-[#2D6A8F] text-white" : "bg-white border border-[#B8D4E3] text-[#1A2332] hover:bg-gray-50"}`}>
+                      Назначить {editNewPrice} ₽
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <input type="number" placeholder="Цена (руб)" value={editPrice} onChange={e => { setEditPrice(e.target.value); setEditPriceMode("keep") }} className="w-full p-2 border border-[#B8D4E3] rounded-lg" required />
               <div className="flex gap-2 pt-2">
                 <button type="submit" disabled={editing} className="flex-1 bg-[#2D6A8F] text-white p-2 rounded-lg font-semibold hover:bg-[#245a7a] disabled:opacity-50">{editing ? "Сохранение..." : "Сохранить"}</button>
                 <button type="button" onClick={() => setEditingBooking(null)} className="flex-1 bg-gray-200 p-2 rounded-lg font-semibold hover:bg-gray-300">Отмена</button>
