@@ -35,7 +35,7 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "Вы не зарегистрированы как водитель" }, { status: 404 })
     }
 
-    const { name, phone, carInfo, licensePlate, photoUrl } = await req.json()
+    const { name, phone, carInfo, licensePlate, photoUrl, carPhotoUrl, comments } = await req.json()
 
     const updated = await prisma.driver.update({
       where: { id: driver.id },
@@ -44,7 +44,9 @@ export async function PUT(req: Request) {
         ...(phone && { phone }),
         ...(carInfo && { carInfo }),
         ...(licensePlate !== undefined && { licensePlate }),
-        ...(photoUrl !== undefined && { photoUrl })
+        ...(photoUrl !== undefined && { photoUrl }),
+        ...(carPhotoUrl !== undefined && { carPhotoUrl }),
+        ...(comments !== undefined && { comments })
       }
     })
 

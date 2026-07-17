@@ -42,6 +42,8 @@ type Driver = {
   carInfo: string
   licensePlate: string | null
   photoUrl: string | null
+  carPhotoUrl: string | null
+  comments: string | null
   isActive: boolean
   status: string
   createdAt: string
@@ -519,41 +521,60 @@ export default function AdminPage() {
               <button onClick={() => setShowDriverModal(true)} className="bg-[#E8A838] text-[#1A2332] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#d49a30] transition">+ Добавить водителя</button>
             </div>
             <div className="bg-white rounded-lg border border-[#B8D4E3] overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-[#F5F0EB]">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Имя</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Телефон</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Автомобиль</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Гос. номер</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Статус</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Пароль</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Действия</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#B8D4E3]">
-                  {drivers.map((d) => (
-                    <tr key={d.id} className="hover:bg-[#F5F0EB]/50">
-                      <td className="px-4 py-3 text-sm font-medium">{d.name}</td>
-                      <td className="px-4 py-3 text-sm">{d.phone}</td>
-                      <td className="px-4 py-3 text-sm">{d.carInfo}</td>
-                      <td className="px-4 py-3 text-sm text-[#8B7355]">{d.licensePlate || "—"}</td>
-                      <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${d.isActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>{d.isActive ? "Активен" : "Неактивен"}</span></td>
-                      <td className="px-4 py-3">
-                        {d.userId ? (
-                          <button onClick={() => { setPasswordModalUser({ id: d.userId!, phone: d.phone, name: d.name }); setNewPassword("") }}
-                            className="bg-[#2D6A8F] text-white px-2 py-1 rounded text-xs font-medium hover:bg-[#245a7a]">Пароль</button>
-                        ) : (
-                          <span className="text-xs text-[#8B7355]">Нет аккаунта</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <button onClick={() => handleDeleteDriver(d.id)} className="text-red-500 hover:text-red-700 text-sm">Удалить</button>
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-[#F5F0EB]">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Фото</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Имя</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Телефон</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Автомобиль</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Фото авто</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Гос. номер</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Комментарий</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Статус</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Действия</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-[#B8D4E3]">
+                    {drivers.map((d) => (
+                      <tr key={d.id} className="hover:bg-[#F5F0EB]/50">
+                        <td className="px-4 py-3">
+                          {d.photoUrl ? (
+                            <img src={d.photoUrl} alt={d.name} className="w-10 h-10 rounded-full object-cover" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-[#2D6A8F] text-white flex items-center justify-center font-bold text-sm">
+                              {d.name.charAt(0)}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-medium">{d.name}</td>
+                        <td className="px-4 py-3 text-sm">{d.phone}</td>
+                        <td className="px-4 py-3 text-sm">{d.carInfo}</td>
+                        <td className="px-4 py-3">
+                          {d.carPhotoUrl ? (
+                            <img src={d.carPhotoUrl} alt="Авто" className="w-10 h-10 rounded object-cover" />
+                          ) : (
+                            <span className="text-[#B8D4E3]">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-[#8B7355]">{d.licensePlate || "—"}</td>
+                        <td className="px-4 py-3 text-sm text-[#8B7355] max-w-[150px] truncate" title={d.comments || ""}>{d.comments || "—"}</td>
+                        <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${d.isActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>{d.isActive ? "Активен" : "Неактивен"}</span></td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-1 flex-wrap">
+                            {d.userId && (
+                              <button onClick={() => { setPasswordModalUser({ id: d.userId!, phone: d.phone, name: d.name }); setNewPassword("") }}
+                                className="bg-[#2D6A8F] text-white px-2 py-1 rounded text-xs font-medium hover:bg-[#245a7a]">Пароль</button>
+                            )}
+                            <button onClick={() => handleDeleteDriver(d.id)} className="text-red-500 hover:text-red-700 text-sm">Удалить</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
               {drivers.length === 0 && <div className="text-center py-12 text-[#8B7355]">Водителей пока нет. Добавьте первого!</div>}
             </div>
           </>

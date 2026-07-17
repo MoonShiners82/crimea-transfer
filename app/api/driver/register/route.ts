@@ -15,7 +15,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Вы уже зарегистрированы как водитель" }, { status: 400 })
     }
 
-    const { name, phone, carInfo, licensePlate, photoUrl } = await req.json()
+    const { name, phone, carInfo, licensePlate, photoUrl, carPhotoUrl, comments } = await req.json()
 
     if (!name || !phone || !carInfo) {
       return NextResponse.json({ error: "Заполните все обязательные поля" }, { status: 400 })
@@ -29,6 +29,8 @@ export async function POST(req: Request) {
         carInfo,
         licensePlate: licensePlate || null,
         photoUrl: photoUrl || null,
+        carPhotoUrl: carPhotoUrl || null,
+        comments: comments || null,
         status: "pending"
       }
     })

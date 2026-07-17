@@ -31,6 +31,8 @@ type DriverProfile = {
   carInfo: string
   status: string
   photoUrl: string | null
+  carPhotoUrl: string | null
+  licensePlate: string | null
 }
 
 const statusColors: Record<string, string> = {
@@ -177,19 +179,27 @@ export default function DriverPage() {
 
         {/* Driver Info Card */}
         {profile && (
-          <div className="bg-white rounded-lg p-4 border border-[#B8D4E3] mb-6 flex items-center gap-4">
-            {profile.photoUrl ? (
-              <img src={profile.photoUrl} alt={profile.name || "Водитель"} className="w-16 h-16 rounded-full object-cover" />
-            ) : (
-              <div className="w-16 h-16 rounded-full bg-[#2D6A8F] text-white flex items-center justify-center text-2xl font-bold">
-                {(profile.name || "?").charAt(0)}
+          <div className="bg-white rounded-lg p-4 border border-[#B8D4E3] mb-6">
+            <div className="flex items-center gap-4 mb-3">
+              {profile.photoUrl ? (
+                <img src={profile.photoUrl} alt={profile.name || "Водитель"} className="w-16 h-16 rounded-full object-cover" />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-[#2D6A8F] text-white flex items-center justify-center text-2xl font-bold">
+                  {(profile.name || "?").charAt(0)}
+                </div>
+              )}
+              <div>
+                <h2 className="font-semibold text-[#1A2332]">{profile.name || "Без имени"}</h2>
+                <p className="text-sm text-[#8B7355]">{profile.carInfo || ""}</p>
+                <p className="text-sm text-[#8B7355]">{profile.phone}</p>
+                {profile.licensePlate && <p className="text-xs text-[#8B7355]">Гос. номер: {profile.licensePlate}</p>}
+              </div>
+            </div>
+            {profile.carPhotoUrl && (
+              <div className="mt-2">
+                <img src={profile.carPhotoUrl} alt="Автомобиль" className="w-full h-40 object-cover rounded-lg" />
               </div>
             )}
-            <div>
-              <h2 className="font-semibold text-[#1A2332]">{profile.name || "Без имени"}</h2>
-              <p className="text-sm text-[#8B7355]">{profile.carInfo || ""}</p>
-              <p className="text-sm text-[#8B7355]">{profile.phone}</p>
-            </div>
           </div>
         )}
 

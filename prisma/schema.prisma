@@ -87,6 +87,8 @@ model Driver {
   carInfo      String
   licensePlate String?
   photoUrl     String?
+  carPhotoUrl  String?
+  comments     String?
   status       String    @default("pending") // pending | approved | rejected
   isActive     Boolean   @default(true)
   createdAt    DateTime  @default(now())
