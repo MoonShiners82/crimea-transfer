@@ -87,7 +87,7 @@ export default function AdminPage() {
   const { user, status: authStatus } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
-  const [tab, setTab] = useState<"bookings" | "drivers" | "applications" | "dispatchers">("bookings")
+  const [tab, setTab] = useState<"bookings" | "drivers" | "applications" | "dispatchers" | "revenue">("bookings")
   const [bookings, setBookings] = useState<Booking[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
   const [drivers, setDrivers] = useState<Driver[]>([])
@@ -144,6 +144,13 @@ export default function AdminPage() {
   const [passwordModalUser, setPasswordModalUser] = useState<{ id: string; phone: string; name: string | null } | null>(null)
   const [newPassword, setNewPassword] = useState("")
   const [settingPassword, setSettingPassword] = useState(false)
+
+  // Revenue adjustments
+  const [adjustments, setAdjustments] = useState<{ id: string; amount: number; description: string; date: string; createdBy: string | null }[]>([])
+  const [adjAmount, setAdjAmount] = useState("")
+  const [adjDescription, setAdjDescription] = useState("")
+  const [adjDate, setAdjDate] = useState("")
+  const [addingAdj, setAddingAdj] = useState(false)
 
   const fetchBookings = async (statusOverride?: string, searchOverride?: string) => {
     try {
@@ -220,6 +227,40 @@ export default function AdminPage() {
     } catch (e) { console.error(e) }
   }
 
+  const fetchAdjustments = async () => {
+    try {
+      const res = await fetch("/api/admin/revenue-adjustments")
+      if (res.ok) setAdjustments(await res.json())
+    } catch (e) { console.error(e) }
+  }
+
+  const handleAddAdjustment = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!adjAmount || !adjDescription) return
+    setAddingAdj(true)
+    try {
+      const res = await fetch("/api/admin/revenue-adjustments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: parseInt(adjAmount), description: adjDescription, date: adjDate || undefined }),
+      })
+      if (res.ok) {
+        setAdjAmount(""); setAdjDescription(""); setAdjDate("")
+        fetchAdjustments(); fetchStats(); toast("Корректировка добавлена", "success")
+      } else toast("Ошибка", "error")
+    } catch { toast("Ошибка сервера", "error") }
+    finally { setAddingAdj(false) }
+  }
+
+  const handleDeleteAdjustment = async (id: string) => {
+    if (!confirm("Удалить корректировку?")) return
+    try {
+      const res = await fetch(`/api/admin/revenue-adjustments?id=${id}`, { method: "DELETE" })
+      if (res.ok) { fetchAdjustments(); fetchStats(); toast("Удалено", "success") }
+      else toast("Ошибка", "error")
+    } catch { toast("Ошибка сервера", "error") }
+  }
+
   const handleSetDispatcher = async (phone: string) => {
     if (!confirm(`Назначить ${phone} диспетчером?`)) return
     try {
@@ -277,7 +318,8 @@ export default function AdminPage() {
         fetchDrivers(),
         fetchApplications(),
         fetchDispatchers(),
-        fetchRoutes()
+        fetchRoutes(),
+        fetchAdjustments()
       ]).finally(() => setLoading(false))
     }
   }, [authStatus])
@@ -471,6 +513,7 @@ export default function AdminPage() {
             Заявки водителей {applications.length > 0 && <span className="ml-1 bg-[#E8A838] text-[#1A2332] px-1.5 py-0.5 rounded-full text-xs">{applications.length}</span>}
           </button>
           <button onClick={() => setTab("dispatchers")} className={`px-4 py-2 rounded-lg text-sm font-medium transition ${tab === "dispatchers" ? "bg-[#1A2332] text-white" : "bg-white text-[#1A2332] hover:bg-gray-100 border border-[#B8D4E3]"}`}>Диспетчеры</button>
+          <button onClick={() => setTab("revenue")} className={`px-4 py-2 rounded-lg text-sm font-medium transition ${tab === "revenue" ? "bg-[#1A2332] text-white" : "bg-white text-[#1A2332] hover:bg-gray-100 border border-[#B8D4E3]"}`}>Выручка</button>
           <div className="ml-auto flex gap-2 items-center">
             <input type="date" value={exportDateFrom} onChange={e => setExportDateFrom(e.target.value)} className="px-2 py-1.5 border border-[#B8D4E3] rounded-lg text-sm" placeholder="С даты" />
             <span className="text-[#8B7355] text-sm">—</span>
@@ -725,6 +768,72 @@ export default function AdminPage() {
                 </tbody>
               </table>
               {dispatchers.length === 0 && <div className="text-center py-12 text-[#8B7355]">Диспетчеров пока нет</div>}
+            </div>
+          </>
+        )}
+
+        {/* Revenue Tab */}
+        {tab === "revenue" && (
+          <>
+            <div className="bg-white rounded-lg p-6 border border-[#B8D4E3] mb-6">
+              <h2 className="text-xl font-semibold text-[#1A2332] mb-4" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
+                Добавить корректировку
+              </h2>
+              <form onSubmit={handleAddAdjustment} className="flex flex-wrap gap-3 items-end">
+                <div>
+                  <label className="block text-sm text-[#8B7355] mb-1">Сумма (руб)</label>
+                  <input type="number" value={adjAmount} onChange={e => setAdjAmount(e.target.value)}
+                    placeholder="+500 или -300" required
+                    className="w-36 p-2 border border-[#B8D4E3] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2D6A8F]" />
+                </div>
+                <div className="flex-1 min-w-[200px]">
+                  <label className="block text-sm text-[#8B7355] mb-1">Описание</label>
+                  <input type="text" value={adjDescription} onChange={e => setAdjDescription(e.target.value)}
+                    placeholder="Например: заправка, штраф, бонус" required
+                    className="w-full p-2 border border-[#B8D4E3] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2D6A8F]" />
+                </div>
+                <div>
+                  <label className="block text-sm text-[#8B7355] mb-1">Дата</label>
+                  <input type="date" value={adjDate} onChange={e => setAdjDate(e.target.value)}
+                    className="w-40 p-2 border border-[#B8D4E3] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2D6A8F]" />
+                </div>
+                <button type="submit" disabled={addingAdj}
+                  className="bg-[#E8A838] text-[#1A2332] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#d49a30] disabled:opacity-50 transition">
+                  {addingAdj ? "..." : "Добавить"}
+                </button>
+              </form>
+            </div>
+
+            <div className="bg-white rounded-lg border border-[#B8D4E3] overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-[#F5F0EB]">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Дата</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Описание</th>
+                      <th className="px-4 py-3 text-right text-sm font-semibold text-[#1A2332]">Сумма</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Кем</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#B8D4E3]">
+                    {adjustments.map(a => (
+                      <tr key={a.id} className="hover:bg-[#F5F0EB]/50">
+                        <td className="px-4 py-3 text-sm">{new Date(a.date).toLocaleDateString("ru")}</td>
+                        <td className="px-4 py-3 text-sm font-medium">{a.description}</td>
+                        <td className={`px-4 py-3 text-sm font-bold text-right ${a.amount >= 0 ? "text-green-600" : "text-red-500"}`}>
+                          {a.amount >= 0 ? "+" : ""}{a.amount.toLocaleString("ru")} ₽
+                        </td>
+                        <td className="px-4 py-3 text-sm text-[#8B7355]">{a.createdBy || "—"}</td>
+                        <td className="px-4 py-3">
+                          <button onClick={() => handleDeleteAdjustment(a.id)} className="text-red-500 hover:text-red-700 text-sm">Удалить</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {adjustments.length === 0 && <div className="text-center py-12 text-[#8B7355]">Корректировок пока нет</div>}
             </div>
           </>
         )}

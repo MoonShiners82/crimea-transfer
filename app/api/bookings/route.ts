@@ -42,29 +42,67 @@ export async function POST(req: Request) {
 
     const data = await req.json()
 
-    if (!data.routeId || !data.datetime || !data.passengers || !data.baggageType) {
+    if (!data.datetime || !data.passengers || !data.baggageType) {
       return NextResponse.json(
         { error: "Все поля обязательны" },
         { status: 400 }
       )
     }
 
-    const route = await prisma.route.findUnique({
-      where: { id: data.routeId }
-    })
+    const isCustomRoute = !!data.fromPoint && !!data.toPoint
 
-    if (!route) {
+    if (!data.routeId && !isCustomRoute) {
       return NextResponse.json(
-        { error: "Маршрут не найден" },
-        { status: 404 }
+        { error: "Укажите маршрут" },
+        { status: 400 }
       )
     }
 
-    if (!route.isActive) {
-      return NextResponse.json(
-        { error: "Маршрут больше не доступен" },
-        { status: 400 }
-      )
+    let routeId = data.routeId
+    let routeDistanceKm = 0
+    let routeDurationMin = 0
+    let routeFromPoint = ""
+    let routeToPoint = ""
+    let routePricePerBaggage = 500
+
+    if (isCustomRoute) {
+      routeDistanceKm = data.distanceKm || 0
+      routeDurationMin = data.durationMin || Math.round(routeDistanceKm * 1.2)
+      routeFromPoint = data.fromPoint
+      routeToPoint = data.toPoint
+
+      const existingRoute = await prisma.route.findFirst({
+        where: { fromPoint: routeFromPoint, toPoint: routeToPoint }
+      })
+
+      if (existingRoute) {
+        routeId = existingRoute.id
+        routeDistanceKm = existingRoute.distanceKm
+        routeDurationMin = existingRoute.durationMin
+        routePricePerBaggage = existingRoute.pricePerBaggage
+      } else {
+        const newRoute = await prisma.route.create({
+          data: {
+            fromPoint: routeFromPoint,
+            toPoint: routeToPoint,
+            distanceKm: routeDistanceKm,
+            durationMin: routeDurationMin,
+            priceBase: 0,
+            pricePerBaggage: routePricePerBaggage,
+            isActive: false,
+          }
+        })
+        routeId = newRoute.id
+      }
+    } else {
+      const route = await prisma.route.findUnique({ where: { id: data.routeId } })
+      if (!route) return NextResponse.json({ error: "Маршрут не найден" }, { status: 404 })
+      if (!route.isActive) return NextResponse.json({ error: "Маршрут больше не доступен" }, { status: 400 })
+      routeDistanceKm = route.distanceKm
+      routeDurationMin = route.durationMin
+      routeFromPoint = route.fromPoint
+      routeToPoint = route.toPoint
+      routePricePerBaggage = route.pricePerBaggage
     }
 
     const settings = await prisma.setting.findMany()
@@ -81,13 +119,13 @@ export async function POST(req: Request) {
     const selectedClass = carClasses.find((c: { id: string }) => c.id === data.carClass)
     const coefficient = selectedClass?.coefficient || 1.0
 
-    let priceCalculated = Math.round(route.distanceKm * pricePerKm * coefficient)
+    let priceCalculated = Math.round(routeDistanceKm * pricePerKm * coefficient)
     if (data.passengers > 4) {
       priceCalculated += (data.passengers - 4) * extraPassengerPrice
     }
-    if (data.baggageType === "1") priceCalculated += route.pricePerBaggage
-    if (data.baggageType === "2plus") priceCalculated += route.pricePerBaggage * 2
-    if (data.baggageType === "oversized") priceCalculated += route.pricePerBaggage * 3
+    if (data.baggageType === "1") priceCalculated += routePricePerBaggage
+    if (data.baggageType === "2plus") priceCalculated += routePricePerBaggage * 2
+    if (data.baggageType === "oversized") priceCalculated += routePricePerBaggage * 3
     if (data.datetime) {
       const hour = new Date(data.datetime).getHours()
       if (nightHoursStart > nightHoursEnd) {
@@ -104,7 +142,7 @@ export async function POST(req: Request) {
     const booking = await prisma.booking.create({
       data: {
         userId: dbUser.id,
-        routeId: data.routeId,
+        routeId,
         datetime: new Date(data.datetime),
         passengers: data.passengers,
         baggageType: data.baggageType,

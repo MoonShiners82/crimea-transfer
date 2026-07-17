@@ -89,6 +89,7 @@ model Driver {
   photoUrl     String?
   carPhotoUrl  String?
   comments     String?
+  carClasses   String    @default("") // comma-separated: "economy,comfort,comfort_plus"
   status       String    @default("pending") // pending | approved | rejected
   isActive     Boolean   @default(true)
   createdAt    DateTime  @default(now())
@@ -141,4 +142,15 @@ model Setting {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
+}
+
+model RevenueAdjustment {
+  id          String   @id @default(cuid())
+  amount      Int      // positive = income, negative = expense
+  description String
+  date        DateTime @default(now())
+  createdBy   String?
+  createdAt   DateTime @default(now())
+
+  @@index([date])
 }

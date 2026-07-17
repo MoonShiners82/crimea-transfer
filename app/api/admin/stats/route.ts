@@ -28,7 +28,9 @@ export async function GET(req: Request) {
       avgPriceResult,
       totalUsers,
       popularRoutes,
-      recentBookings
+      recentBookings,
+      totalAdjustments,
+      todayAdjustments,
     ] = await Promise.all([
       prisma.booking.count(),
       prisma.booking.count({ where: { status: "pending" } }),
@@ -67,7 +69,14 @@ export async function GET(req: Request) {
           user: { select: { phone: true, name: true } },
           route: { select: { fromPoint: true, toPoint: true } }
         }
-      })
+      }),
+      prisma.revenueAdjustment.aggregate({
+        _sum: { amount: true },
+      }),
+      prisma.revenueAdjustment.aggregate({
+        _sum: { amount: true },
+        where: { date: { gte: todayStart } },
+      }),
     ])
 
     const routesWithDetails = await Promise.all(
@@ -83,8 +92,8 @@ export async function GET(req: Request) {
       })
     )
 
-    const totalRevenue = revenueResult._sum.priceFinal || revenueResult._sum.priceCalculated || 0
-    const todayRevenue = todayRevenueResult._sum.priceFinal || todayRevenueResult._sum.priceCalculated || 0
+    const totalRevenue = (revenueResult._sum.priceFinal || revenueResult._sum.priceCalculated || 0) + (totalAdjustments._sum.amount || 0)
+    const todayRevenue = (todayRevenueResult._sum.priceFinal || todayRevenueResult._sum.priceCalculated || 0) + (todayAdjustments._sum.amount || 0)
     const avgPrice = Math.round(avgPriceResult._avg.priceFinal || avgPriceResult._avg.priceCalculated || 0)
 
     return NextResponse.json({

@@ -149,6 +149,7 @@ async function handleApiRoute(request: NextRequest, pathname: string) {
     "/api/settings",
     "/api/reviews",
     "/api/cars",
+    "/api/distances",
   ]
 
   const isPublic = PUBLIC_API_ROUTES.some(route => pathname.startsWith(route))
