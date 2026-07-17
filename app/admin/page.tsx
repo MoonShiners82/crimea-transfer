@@ -7,6 +7,7 @@ import { useToast } from "../components/Toast"
 import { useAuth } from "@/lib/useAuth"
 import { Skeleton, TableSkeleton } from "../components/Skeleton"
 import CarSelector from "../components/CarSelector"
+import PhotoUpload from "../components/PhotoUpload"
 
 type Booking = {
   id: string
@@ -847,20 +848,8 @@ export default function AdminPage() {
               </div>
               <CarSelector value={editDrvCar} onChange={setEditDrvCar} />
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-[#1A2332] mb-1">Фото водителя (URL)</label>
-                  <input type="url" value={editDrvPhoto || ""} onChange={e => setEditDrvPhoto(e.target.value || null)}
-                    placeholder="https://..."
-                    className="w-full p-2 border border-[#B8D4E3] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2D6A8F]" />
-                  {editDrvPhoto && <img src={editDrvPhoto} alt="Фото" className="w-16 h-16 rounded-full object-cover mt-2" />}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#1A2332] mb-1">Фото автомобиля (URL)</label>
-                  <input type="url" value={editDrvCarPhoto || ""} onChange={e => setEditDrvCarPhoto(e.target.value || null)}
-                    placeholder="https://..."
-                    className="w-full p-2 border border-[#B8D4E3] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2D6A8F]" />
-                  {editDrvCarPhoto && <img src={editDrvCarPhoto} alt="Фото авто" className="w-16 h-16 rounded object-cover mt-2" />}
-                </div>
+                <PhotoUpload label="Фото водителя" value={editDrvPhoto} onChange={setEditDrvPhoto} round />
+                <PhotoUpload label="Фото автомобиля" value={editDrvCarPhoto} onChange={setEditDrvCarPhoto} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-[#1A2332] mb-1">Гос. номер</label>

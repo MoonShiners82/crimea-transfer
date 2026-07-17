@@ -54,11 +54,19 @@ export default function CarSelector({ value, onChange }: CarSelectorProps) {
     if (selectedMake) {
       fetch(`/api/cars?q=${encodeURIComponent(selectedMake)}`)
         .then(r => r.json())
-        .then((data: CarData) => {
+        .then((data: { makes: string[]; models: string[] | { make: string; model: string }[] }) => {
           if (data.models?.length) {
-            setModels(data.models.filter((m: { make: string }) => m.make === selectedMake).map((m: { model: string }) => m.model))
+            const modelNames = typeof data.models[0] === "string"
+              ? data.models as string[]
+              : (data.models as { make: string; model: string }[])
+                  .filter(m => m.make === selectedMake)
+                  .map(m => m.model)
+            setModels(modelNames)
+          } else {
+            setModels([])
           }
         })
+        .catch(() => setModels([]))
     } else {
       setModels([])
     }
