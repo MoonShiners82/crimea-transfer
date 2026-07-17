@@ -384,6 +384,7 @@ export default function AdminPage() {
           phone: editDrvPhone,
           carInfo: editDrvCar,
           licensePlate: editDrvPlate,
+          photoUrl: editDrvPhoto,
           carPhotoUrl: editDrvCarPhoto,
           comments: editDrvComments,
         })
@@ -845,6 +846,22 @@ export default function AdminPage() {
                   className="w-full p-2 border border-[#B8D4E3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2D6A8F]" />
               </div>
               <CarSelector value={editDrvCar} onChange={setEditDrvCar} />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-[#1A2332] mb-1">Фото водителя (URL)</label>
+                  <input type="url" value={editDrvPhoto || ""} onChange={e => setEditDrvPhoto(e.target.value || null)}
+                    placeholder="https://..."
+                    className="w-full p-2 border border-[#B8D4E3] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2D6A8F]" />
+                  {editDrvPhoto && <img src={editDrvPhoto} alt="Фото" className="w-16 h-16 rounded-full object-cover mt-2" />}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#1A2332] mb-1">Фото автомобиля (URL)</label>
+                  <input type="url" value={editDrvCarPhoto || ""} onChange={e => setEditDrvCarPhoto(e.target.value || null)}
+                    placeholder="https://..."
+                    className="w-full p-2 border border-[#B8D4E3] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2D6A8F]" />
+                  {editDrvCarPhoto && <img src={editDrvCarPhoto} alt="Фото авто" className="w-16 h-16 rounded object-cover mt-2" />}
+                </div>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-[#1A2332] mb-1">Гос. номер</label>
                 <input type="text" value={editDrvPlate} onChange={e => setEditDrvPlate(e.target.value.toUpperCase())}

@@ -37,12 +37,18 @@ export default function CarSelector({ value, onChange }: CarSelectorProps) {
   useEffect(() => {
     if (value) {
       const parts = value.split(", ").map(s => s.trim())
-      if (parts.length >= 1) setSelectedMake(parts[0] || "")
-      if (parts.length >= 2) setSelectedModel(parts[1] || "")
-      if (parts.length >= 3) setYear(parts[2] || "")
-      if (parts.length >= 4) setColor(parts[3] || "")
+      setSelectedMake(parts[0] || "")
+      setSelectedModel(parts[1] || "")
+      setYear(parts[2] || "")
+      setColor(parts[3] || "")
+    } else {
+      setSelectedMake("")
+      setSelectedModel("")
+      setYear("")
+      setColor("")
     }
-  }, [])
+    setSearch("")
+  }, [value])
 
   useEffect(() => {
     if (selectedMake) {
