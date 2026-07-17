@@ -24,10 +24,10 @@ export async function POST(req: Request) {
     const { res } = requireRole("admin", req)
     if (res) return res
 
-    const { name, phone, carInfo } = await req.json()
+    const { name, phone, carInfo, carClasses } = await req.json()
     if (!name || !phone) return NextResponse.json({ error: "Name and phone required" }, { status: 400 })
 
-    const driver = await prisma.driver.create({ data: { name, phone, carInfo: carInfo || "" } })
+    const driver = await prisma.driver.create({ data: { name, phone, carInfo: carInfo || "", carClasses: carClasses || "" } })
     return NextResponse.json(driver)
   } catch (error) {
     console.error("Create driver error:", error)

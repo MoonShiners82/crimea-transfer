@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { requireAuthWithDB } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 import { logBookingAudit } from "@/lib/audit"
+import { sendBookingConfirmation, sendDispatcherNewBooking } from "@/lib/notifications"
 
 export async function GET(req: Request) {
   try {
@@ -149,11 +150,20 @@ export async function POST(req: Request) {
         priceCalculated,
         carClass: data.carClass || null,
         notes: data.notes || null,
-        status: "pending"
+        status: "pending",
+        paymentStatus: "unpaid",
       },
       include: {
         route: { select: { fromPoint: true, toPoint: true } }
       }
+    })
+
+    await prisma.payment.create({
+      data: {
+        bookingId: booking.id,
+        amount: priceCalculated,
+        status: "pending",
+      },
     })
 
     await logBookingAudit({

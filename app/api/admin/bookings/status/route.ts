@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { requireRole } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 import { logBookingAudit } from "@/lib/audit"
+import { sendStatusChange, sendDriverAssigned } from "@/lib/notifications"
 
 export async function POST(req: Request) {
   try {
@@ -69,6 +70,16 @@ export async function POST(req: Request) {
       performedBy: user?.phone,
       details: reason || undefined,
     })
+
+    sendStatusChange(updated, status).catch(() => {})
+
+    if (status === "confirmed" && updated.driverName && updated.driverPhone && updated.carInfo) {
+      sendDriverAssigned(updated, {
+        name: updated.driverName,
+        phone: updated.driverPhone,
+        carInfo: updated.carInfo
+      }).catch(() => {})
+    }
 
     return NextResponse.json({ success: true, booking: updated })
   } catch (error) {

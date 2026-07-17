@@ -46,6 +46,7 @@ type Driver = {
   photoUrl: string | null
   carPhotoUrl: string | null
   comments: string | null
+  carClasses: string
   isActive: boolean
   status: string
   createdAt: string
@@ -134,6 +135,7 @@ export default function AdminPage() {
   const [newDriverName, setNewDriverName] = useState("")
   const [newDriverPhone, setNewDriverPhone] = useState("")
   const [newDriverCar, setNewDriverCar] = useState("")
+  const [newDriverCarClasses, setNewDriverCarClasses] = useState("")
   const [addingDriver, setAddingDriver] = useState(false)
 
   // Edit driver modal
@@ -145,6 +147,7 @@ export default function AdminPage() {
   const [editDrvPhoto, setEditDrvPhoto] = useState<string | null>(null)
   const [editDrvCarPhoto, setEditDrvCarPhoto] = useState<string | null>(null)
   const [editDrvComments, setEditDrvComments] = useState("")
+  const [editDrvCarClasses, setEditDrvCarClasses] = useState("")
   const [savingDriver, setSavingDriver] = useState(false)
 
   // Loading states
@@ -424,9 +427,9 @@ export default function AdminPage() {
       const res = await fetch("/api/admin/drivers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newDriverName, phone: newDriverPhone, carInfo: newDriverCar })
+        body: JSON.stringify({ name: newDriverName, phone: newDriverPhone, carInfo: newDriverCar, carClasses: newDriverCarClasses })
       })
-      if (res.ok) { setShowDriverModal(false); setNewDriverName(""); setNewDriverPhone(""); setNewDriverCar(""); fetchDrivers(); toast("Водитель добавлен", "success") }
+      if (res.ok) { setShowDriverModal(false); setNewDriverName(""); setNewDriverPhone(""); setNewDriverCar(""); setNewDriverCarClasses(""); fetchDrivers(); toast("Водитель добавлен", "success") }
       else toast("Ошибка добавления", "error")
     } catch { toast("Ошибка сервера", "error") }
     finally { setAddingDriver(false) }
@@ -449,6 +452,7 @@ export default function AdminPage() {
     setEditDrvPhoto(d.photoUrl)
     setEditDrvCarPhoto(d.carPhotoUrl)
     setEditDrvComments(d.comments || "")
+    setEditDrvCarClasses(d.carClasses || "")
   }
 
   const handleSaveDriver = async (e: React.FormEvent) => {
@@ -468,6 +472,7 @@ export default function AdminPage() {
           photoUrl: editDrvPhoto,
           carPhotoUrl: editDrvCarPhoto,
           comments: editDrvComments,
+          carClasses: editDrvCarClasses,
         })
       })
       if (res.ok) { setEditingDriver(null); fetchDrivers(); toast("Водитель обновлён", "success") }
@@ -661,6 +666,7 @@ export default function AdminPage() {
                       <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Автомобиль</th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Фото авто</th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Гос. номер</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Классы</th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Комментарий</th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Статус</th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-[#1A2332]">Действия</th>
@@ -689,6 +695,12 @@ export default function AdminPage() {
                           )}
                         </td>
                         <td className="px-4 py-3 text-sm text-[#8B7355]">{d.licensePlate || "—"}</td>
+                        <td className="px-4 py-3 text-sm text-[#8B7355]">
+                          {d.carClasses ? d.carClasses.split(",").filter(Boolean).map(c => {
+                            const labels: Record<string, string> = { economy: "Эконом", comfort: "Комфорт", comfort_plus: "Комфорт+", business: "Бизнес", minibus: "Микроавтобус" }
+                            return <span key={c} className="inline-block bg-[#B8D4E3] text-[#1A2332] px-1.5 py-0.5 rounded text-xs mr-1 mb-1">{labels[c.trim()] || c.trim()}</span>
+                          }) : "—"}
+                        </td>
                         <td className="px-4 py-3 text-sm text-[#8B7355] max-w-[150px] truncate" title={d.comments || ""}>{d.comments || "—"}</td>
                         <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${d.isActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>{d.isActive ? "Активен" : "Неактивен"}</span></td>
                         <td className="px-4 py-3">
@@ -970,6 +982,29 @@ export default function AdminPage() {
               <input type="text" placeholder="ФИО" value={newDriverName} onChange={e => setNewDriverName(e.target.value)} className="w-full p-2 border border-[#B8D4E3] rounded-lg" required />
               <input type="tel" placeholder="Телефон" value={newDriverPhone} onChange={e => setNewDriverPhone(e.target.value)} className="w-full p-2 border border-[#B8D4E3] rounded-lg" required />
               <input type="text" placeholder="Автомобиль" value={newDriverCar} onChange={e => setNewDriverCar(e.target.value)} className="w-full p-2 border border-[#B8D4E3] rounded-lg" required />
+              <div>
+                <label className="block text-sm font-medium text-[#1A2332] mb-1">Классы автомобилей</label>
+                <div className="flex flex-wrap gap-3">
+                  {(["economy", "comfort", "comfort_plus", "business", "minibus"] as const).map(cls => (
+                    <label key={cls} className="flex items-center gap-1.5 text-sm text-[#1A2332] cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newDriverCarClasses.split(",").map(s => s.trim()).includes(cls)}
+                        onChange={() => {
+                          const current = newDriverCarClasses.split(",").map(s => s.trim()).filter(Boolean)
+                          if (current.includes(cls)) {
+                            setNewDriverCarClasses(current.filter(c => c !== cls).join(","))
+                          } else {
+                            setNewDriverCarClasses([...current, cls].join(","))
+                          }
+                        }}
+                        className="rounded border-[#B8D4E3] text-[#2D6A8F] focus:ring-[#2D6A8F]"
+                      />
+                      {{ economy: "Эконом", comfort: "Комфорт", comfort_plus: "Комфорт+", business: "Бизнес", minibus: "Микроавтобус" }[cls]}
+                    </label>
+                  ))}
+                </div>
+              </div>
               <div className="flex gap-2 pt-2">
                 <button type="submit" disabled={addingDriver} className="flex-1 bg-[#E8A838] text-[#1A2332] p-2 rounded-lg font-semibold hover:bg-[#d49a30] disabled:opacity-50">{addingDriver ? "Добавление..." : "Добавить"}</button>
                 <button type="button" onClick={() => setShowDriverModal(false)} className="flex-1 bg-gray-200 p-2 rounded-lg font-semibold hover:bg-gray-300">Отмена</button>
@@ -1020,6 +1055,29 @@ export default function AdminPage() {
                   className="w-full p-2 border border-[#B8D4E3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2D6A8F]" />
               </div>
               <CarSelector value={editDrvCar} onChange={setEditDrvCar} />
+              <div>
+                <label className="block text-sm font-medium text-[#1A2332] mb-1">Классы автомобилей</label>
+                <div className="flex flex-wrap gap-3">
+                  {(["economy", "comfort", "comfort_plus", "business", "minibus"] as const).map(cls => (
+                    <label key={cls} className="flex items-center gap-1.5 text-sm text-[#1A2332] cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={editDrvCarClasses.split(",").map(s => s.trim()).includes(cls)}
+                        onChange={() => {
+                          const current = editDrvCarClasses.split(",").map(s => s.trim()).filter(Boolean)
+                          if (current.includes(cls)) {
+                            setEditDrvCarClasses(current.filter(c => c !== cls).join(","))
+                          } else {
+                            setEditDrvCarClasses([...current, cls].join(","))
+                          }
+                        }}
+                        className="rounded border-[#B8D4E3] text-[#2D6A8F] focus:ring-[#2D6A8F]"
+                      />
+                      {{ economy: "Эконом", comfort: "Комфорт", comfort_plus: "Комфорт+", business: "Бизнес", minibus: "Микроавтобус" }[cls]}
+                    </label>
+                  ))}
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <PhotoUpload label="Фото водителя" value={editDrvPhoto} onChange={setEditDrvPhoto} round />
                 <PhotoUpload label="Фото автомобиля" value={editDrvCarPhoto} onChange={setEditDrvCarPhoto} />

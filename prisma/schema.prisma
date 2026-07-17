@@ -51,6 +51,7 @@ model Booking {
   priceCalculated Int
   priceFinal      Int?
   status          String    @default("pending")
+  paymentStatus   String?   // null, unpaid, partial, paid, refunded
   driverName      String?
   driverPhone     String?
   carInfo         String?
@@ -59,6 +60,7 @@ model Booking {
   createdAt       DateTime  @default(now())
   confirmedAt     DateTime?
   cancelReason    String?
+  payments        Payment[]
 
   @@index([userId])
   @@index([driverId])
@@ -166,4 +168,21 @@ model RevenueAdjustment {
   createdAt   DateTime @default(now())
 
   @@index([date])
+}
+
+model Payment {
+  id              String    @id @default(cuid())
+  bookingId       String
+  booking         Booking   @relation(fields: [bookingId], references: [id])
+  yookassaId      String?   @unique
+  amount          Int
+  currency        String    @default("RUB")
+  status          String    @default("pending") // pending, waiting_for_capture, succeeded, canceled
+  paymentMethod   String?   // bank_card, sbp, etc
+  confirmationUrl String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([bookingId])
+  @@index([yookassaId])
 }

@@ -1,0 +1,59 @@
+================================================================================
+                    AUTO-DEVELOPMENT LOG
+                    Started: 2026-07-17
+================================================================================
+
+[2026-07-17] Phase 1: Stability — COMPLETED
+--------------------------------------------------------------------------------
+[x] Task 1.1: Webhook reliability — JSON + form payloads, GET health check
+[x] Task 1.2: Car classes multi-select in admin driver editing (5 classes)
+[x] Task 1.3: Driver ЛК — accept/reject buttons, status API updated
+[x] Task 1.4: Nav links — already correct for single-role users
+[x] Status transition confirmed -> pending — allowed, confirmedAt cleared
+[x] Rebrand: КрымТрансфер -> Поехали в Крым (Cormorant Garamond font)
+[x] Booking page: removed preset routes dropdown, kept from/to city selection
+[x] Login: staff link moved to footer, less prominent
+[x] Auto-redirect after flash call auth (window.location.href)
+
+[2026-07-17] Phase 2: Payments (YooKassa) — COMPLETED
+--------------------------------------------------------------------------------
+[x] Payment model in Prisma schema
+[x] DB migration: Payment table + paymentStatus on Booking
+[x] lib/yookassa.ts — createPayment, capturePayment, cancelPayment, handleWebhook
+[x] POST /api/payments/create — creates YooKassa payment, returns confirmationUrl
+[x] POST /api/payments/webhook — handles YooKassa webhook events
+[x] GET /api/payments/[id] — returns payment status
+[x] app/booking/payment/page.tsx — payment UI page
+[x] Bookings now create pending Payment record automatically
+
+Required env vars: YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY, NEXT_PUBLIC_SITE_URL
+
+[2026-07-17] Phase 3: Notifications — COMPLETED
+--------------------------------------------------------------------------------
+[x] lib/notifications.ts — SMS (SMS.ru), Email (Resend), Telegram bot
+[x] sendBookingConfirmation — on new booking
+[x] sendDriverAssigned — when driver assigned
+[x] sendStatusChange — on status change
+[x] sendDispatcherNewBooking — notify dispatcher
+[x] POST /api/notifications/test — admin test endpoint
+[x] Integrated into bookings/status/confirm API routes
+
+Required env vars: SMS_API_KEY, RESEND_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+
+[2026-07-17] Phase 4: UX Improvements — COMPLETED
+--------------------------------------------------------------------------------
+[x] app/sitemap.ts — dynamic sitemap with 5 routes
+[x] app/robots.ts — blocks admin/dispatcher/driver/api/auth
+[x] public/manifest.json — PWA manifest
+[x] public/favicon.svg — SVG favicon with "ПК"
+[x] app/layout.tsx — manifest link, theme-color, icons
+
+[2026-07-17] Phase 5+: Not yet started (analytics, maps, loyalty, etc.)
+
+================================================================================
+DEPLOYMENT LOG
+================================================================================
+
+[2026-07-17] Commit + push + deploy to production
+STATUS: IN PROGRESS
+

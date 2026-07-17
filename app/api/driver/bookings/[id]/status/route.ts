@@ -30,7 +30,7 @@ export async function POST(
     const { id } = await params
     const { status } = await req.json()
 
-    const allowedStatuses = ["in_progress", "completed"]
+    const allowedStatuses = ["in_progress", "completed", "cancelled"]
     if (!allowedStatuses.includes(status)) {
       return NextResponse.json({ error: "Недопустимый статус" }, { status: 400 })
     }
@@ -54,6 +54,10 @@ export async function POST(
 
     if (booking.status !== "in_progress" && status === "completed") {
       return NextResponse.json({ error: "Можно завершить только начатое бронирование" }, { status: 400 })
+    }
+
+    if (status === "cancelled" && !["confirmed", "in_progress"].includes(booking.status)) {
+      return NextResponse.json({ error: "Можно отменить только подтверждённое или начатое бронирование" }, { status: 400 })
     }
 
     const updated = await prisma.booking.update({

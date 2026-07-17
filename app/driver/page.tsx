@@ -149,8 +149,12 @@ export default function DriverPage() {
   }, [authStatus, profile])
 
   const handleStatus = async (bookingId: string, newStatus: string) => {
-    const label = newStatus === "in_progress" ? "начать поездку" : "завершить поездку"
-    if (!confirm(`Вы уверены, что хотите ${label}?`)) return
+    const labels: Record<string, string> = {
+      in_progress: "начать поездку",
+      completed: "завершить поездку",
+      cancelled: "отказаться от поездки",
+    }
+    if (!confirm(`Вы уверены, что хотите ${labels[newStatus] || "изменить статус"}?`)) return
 
     setUpdatingId(bookingId)
     try {
@@ -310,13 +314,22 @@ export default function DriverPage() {
                 {/* Actions */}
                 <div className="flex gap-2">
                   {b.status === "confirmed" && (
-                    <button
-                      onClick={() => handleStatus(b.id, "in_progress")}
-                      disabled={updatingId === b.id}
-                      className="flex-1 bg-[#2D6A8F] text-white py-2 rounded-lg text-sm font-medium hover:bg-[#245a7a] disabled:opacity-50 transition"
-                    >
-                      {updatingId === b.id ? "..." : "Начать поездку"}
-                    </button>
+                    <>
+                      <button
+                        onClick={() => handleStatus(b.id, "in_progress")}
+                        disabled={updatingId === b.id}
+                        className="flex-1 bg-[#2D6A8F] text-white py-2 rounded-lg text-sm font-medium hover:bg-[#245a7a] disabled:opacity-50 transition"
+                      >
+                        {updatingId === b.id ? "..." : "Принять"}
+                      </button>
+                      <button
+                        onClick={() => handleStatus(b.id, "cancelled")}
+                        disabled={updatingId === b.id}
+                        className="flex-1 bg-white text-red-500 py-2 rounded-lg text-sm font-medium hover:bg-red-50 disabled:opacity-50 transition border border-red-200"
+                      >
+                        {updatingId === b.id ? "..." : "Отказаться"}
+                      </button>
+                    </>
                   )}
                   {b.status === "in_progress" && (
                     <button

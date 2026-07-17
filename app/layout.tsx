@@ -16,6 +16,9 @@ export const metadata: Metadata = {
   description: "Бронирование комфортного трансфера из аэропорта Симферополя в Ялту, Алушту, Севастополь, Феодосию и другие города Крыма. Фиксированные цены, современные автомобили, опытные водители.",
   keywords: ["трансфер Крым", "трансфер аэропорт Симферополь", "трансфер Ялта", "трансфер Алушта", "трансфер Севастополь", "заказать трансфер", "перевозки Крым"],
   authors: [{ name: "Поехали в Крым" }],
+  icons: {
+    icon: '/favicon.ico',
+  },
   openGraph: {
     type: "website",
     locale: "ru_RU",
@@ -33,6 +36,8 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#E8A838" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

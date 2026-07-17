@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { requireRole } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
+import { sendDriverAssigned } from "@/lib/notifications"
 
 export async function POST(req: Request) {
   try {
@@ -29,9 +30,11 @@ export async function POST(req: Request) {
       },
       include: {
         user: { select: { phone: true } },
-        route: { select: { id: true, fromPoint: true, toPoint: true } }
+        route: { select: { id: true, fromPoint: true, toPoint: true, distanceKm: true } }
       }
     })
+
+    sendDriverAssigned(booking, { name: driverName, phone: driverPhone, carInfo }).catch(() => {})
 
     return NextResponse.json({ success: true, booking })
   } catch (error) {
