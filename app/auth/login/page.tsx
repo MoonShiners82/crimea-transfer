@@ -173,13 +173,13 @@ export default function LoginPage() {
           <div className="space-y-4">
             <div className="text-center">
               <p className="text-sm text-[#8B7355] mb-4">
-                Позвоните на этот номер с вашего телефона:
+                Позвоните на этот номер с вашего телефона и дождитесь завершения:
               </p>
               <p className="text-3xl font-bold text-[#2D6A8F] tracking-wider">
                 {callTo}
               </p>
               <p className="text-xs text-[#8B7355] mt-2">
-                Звонок бесплатный. Код подтверждения не требуется.
+                Звонок бесплатный. Держите линию до конца.
               </p>
               {timeLeft > 0 && (
                 <p className="text-sm text-[#2D6A8F] mt-3 font-medium">
@@ -193,7 +193,7 @@ export default function LoginPage() {
             {checking && (
               <div className="flex items-center justify-center gap-2">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#2D6A8F]" />
-                <span className="text-sm text-[#8B7355]">Ожидание звонка...</span>
+                <span className="text-sm text-[#8B7355]">Проверяем статус звонка...</span>
               </div>
             )}
 
