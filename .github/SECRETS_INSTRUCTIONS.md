@@ -25,3 +25,13 @@
 - JWT_SECRET = секретный ключ
 - PLUSOFON_API_KEY = 43VkNjDgu9uxr6a5sMkk5RKuvhgbHksP
 - YC_FOLDER_ID = b1gvnuqsklois79c98aj
+
+## 4. Переменные окружения Vercel
+
+Зайди: https://vercel.com/dashboard → crimea-transfer → Settings → Environment Variables
+
+Добавь:
+- PLUSOFON_API_KEY = 43VkNjDgu9uxr6a5sMkk5RKuvhgbHksP
+- DATABASE_URL = postgresql://...
+- JWT_SECRET = секретный ключ
+- NEXT_PUBLIC_SUPABASE_URL = https://ccqsllwamqxjdsmwcjzk.supabase.co

@@ -60,16 +60,6 @@ export default function DriverPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [error, setError] = useState("")
 
-  useEffect(() => {
-    if (authStatus === "unauthenticated") router.push("/auth/staff-login")
-  }, [authStatus, router])
-
-  useEffect(() => {
-    if (authStatus === "authenticated") {
-      fetchProfile()
-    }
-  }, [authStatus])
-
   const fetchProfile = async () => {
     try {
       const res = await fetch("/api/driver/profile")
@@ -89,8 +79,7 @@ export default function DriverPage() {
       } else {
         setLoading(false)
       }
-    } catch (e) {
-      console.error(e)
+    } catch {
       setError("Ошибка загрузки данных")
       setLoading(false)
     }
@@ -102,9 +91,62 @@ export default function DriverPage() {
       if (res.ok) {
         setBookings(await res.json())
       }
-    } catch (e) { console.error(e) }
+    } catch { /* silent */ }
     finally { setLoading(false) }
   }
+
+  const fetchBookingsQuiet = async () => {
+    try {
+      const res = await fetch("/api/driver/bookings")
+      if (!res.ok) return
+      const newBookings: Booking[] = await res.json()
+
+      const oldIds = new Set(bookings.map(b => b.id))
+      const newAssignments = newBookings.filter(
+        (b: Booking) => !oldIds.has(b.id) && b.status === "confirmed"
+      )
+
+      if (newAssignments.length > 0) {
+        toast(`Новое назначение: ${newAssignments[0].route.fromPoint} → ${newAssignments[0].route.toPoint}`, "success")
+
+        if ("Notification" in window && Notification.permission === "granted") {
+          new Notification("Новое назначение!", {
+            body: `${newAssignments[0].route.fromPoint} → ${newAssignments[0].route.toPoint}`,
+          })
+        }
+      }
+
+      setBookings(newBookings)
+    } catch { /* silent */ }
+  }
+
+  useEffect(() => {
+    if (authStatus === "unauthenticated") router.push("/auth/staff-login")
+  }, [authStatus, router])
+
+  useEffect(() => {
+    if (authStatus === "authenticated" && "Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission()
+    }
+  }, [authStatus])
+
+  useEffect(() => {
+    if (authStatus === "authenticated") {
+      fetchProfile()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authStatus])
+
+  useEffect(() => {
+    if (authStatus !== "authenticated" || !profile || profile.status !== "approved") return
+
+    const poll = setInterval(() => {
+      fetchBookingsQuiet()
+    }, 30000)
+
+    return () => clearInterval(poll)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authStatus, profile])
 
   const handleStatus = async (bookingId: string, newStatus: string) => {
     const label = newStatus === "in_progress" ? "начать поездку" : "завершить поездку"
@@ -163,9 +205,17 @@ export default function DriverPage() {
       <div className="max-w-2xl mx-auto px-4">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-[#1A2332]" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
-            Личный кабинет
-          </h1>
+          <div>
+            <h1 className="text-3xl font-bold text-[#1A2332]" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
+              Личный кабинет
+            </h1>
+            {profile && profile.status === "approved" && (
+              <p className="text-xs text-[#8B7355] mt-1 flex items-center gap-1">
+                <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                Онлайн — обновление каждые 30 сек
+              </p>
+            )}
+          </div>
           <Link href="/driver/profile" className="bg-white text-[#1A2332] px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-100 border border-[#B8D4E3] transition">
             Профиль
           </Link>
