@@ -11,14 +11,14 @@ export default function LoginPage() {
   const [step, setStep] = useState<Step>("phone")
   const [phone, setPhone] = useState("")
   const [callTo, setCallTo] = useState("")
-  const [requestId, setRequestId] = useState("")
+  const [key, setKey] = useState("")
   const [message, setMessage] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const [checking, setChecking] = useState(false)
 
   const handleVerify = useCallback(async () => {
-    if (!requestId) return
+    if (!key) return
     setChecking(true)
     setError("")
 
@@ -26,7 +26,7 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/verify-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, requestId })
+        body: JSON.stringify({ phone, key })
       })
 
       const data = await res.json()
@@ -46,13 +46,23 @@ export default function LoginPage() {
     } finally {
       setChecking(false)
     }
-  }, [phone, requestId, router])
+  }, [phone, key, router])
 
   useEffect(() => {
-    if (step !== "call" || !requestId) return
-    const interval = setInterval(handleVerify, 3000)
+    if (step !== "call" || !key) return
+    let elapsed = 0
+    const MAX_POLL_MS = 3 * 60 * 1000
+    const interval = setInterval(() => {
+      elapsed += 3000
+      if (elapsed > MAX_POLL_MS) {
+        clearInterval(interval)
+        setError("Время ожидания истекло. Попробуйте получить новый номер.")
+        return
+      }
+      handleVerify()
+    }, 3000)
     return () => clearInterval(interval)
-  }, [step, requestId, handleVerify])
+  }, [step, key, handleVerify])
 
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -75,7 +85,7 @@ export default function LoginPage() {
       }
 
       setCallTo(data.callTo)
-      setRequestId(data.requestId)
+      setKey(data.key)
       setStep("call")
       setMessage("Позвоните на указанный номер с вашего телефона")
     } catch {
@@ -100,7 +110,7 @@ export default function LoginPage() {
         setError(data.error || "Ошибка")
       } else {
         setCallTo(data.callTo)
-        setRequestId(data.requestId)
+        setKey(data.key)
         setMessage("Новый номер получен")
       }
     } catch {
@@ -181,7 +191,7 @@ export default function LoginPage() {
 
             <div className="flex justify-between">
               <button
-                onClick={() => { setStep("phone"); setCallTo(""); setRequestId(""); setError(""); setMessage("") }}
+                onClick={() => { setStep("phone"); setCallTo(""); setKey(""); setError(""); setMessage("") }}
                 className="text-sm text-[#8B7355] hover:text-[#1A2332]"
               >
                 Изменить номер

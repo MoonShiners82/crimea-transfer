@@ -144,6 +144,9 @@ async function handleApiRoute(request: NextRequest, pathname: string) {
     "/api/auth/logout",
     "/api/auth/refresh",
     "/api/auth/me",
+    "/api/auth/send-code",
+    "/api/auth/verify-code",
+    "/api/auth/plusofon-webhook",
     "/api/calculate-price",
     "/api/routes",
     "/api/settings",
@@ -190,7 +193,7 @@ async function handleApiRoute(request: NextRequest, pathname: string) {
 }
 
 async function handlePageRoute(request: NextRequest, pathname: string) {
-  const PUBLIC_PAGES = ["/", "/auth/staff-login", "/auth/signin", "/terms"]
+  const PUBLIC_PAGES = ["/", "/auth/login", "/auth/staff-login", "/auth/signin", "/terms"]
 
   if (PUBLIC_PAGES.includes(pathname)) {
     return NextResponse.next()

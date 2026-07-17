@@ -1,5 +1,6 @@
 const PLUSOFON_API_KEY = process.env.PLUSOFON_API_KEY
-const PLUSOFON_BASE_URL = "https://api.plusofon.ru"
+const PLUSOFON_BASE_URL = "https://restapi.plusofon.ru"
+const PLUSOFON_CLIENT = "10553"
 
 interface PlusofonResponse<T = unknown> {
   success: boolean
@@ -21,6 +22,8 @@ async function plusofonRequest<T = unknown>(
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    "Accept": "application/json",
+    "Client": PLUSOFON_CLIENT,
     "Authorization": `Bearer ${PLUSOFON_API_KEY}`,
   }
 
@@ -30,53 +33,47 @@ async function plusofonRequest<T = unknown>(
     body: body ? JSON.stringify(body) : undefined,
   })
 
+  const json = await response.json()
+
   if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(`Plusofon API error (${response.status}): ${errorText}`)
+    const msg = (json as { message?: string }).message || `HTTP ${response.status}`
+    throw new Error(`Plusofon API error: ${msg}`)
   }
 
-  return response.json()
+  return json as PlusofonResponse<T>
 }
 
 export interface CallToAuthResponse {
-  request_id: string
+  key: string
   phone: string
 }
 
-export async function requestCallback(phone: string): Promise<CallToAuthResponse> {
+export async function requestCallback(phone: string, hookUrl: string): Promise<CallToAuthResponse> {
   if (!PLUSOFON_API_KEY) {
     throw new Error("PLUSOFON_API_KEY must be set")
   }
 
   const result = await plusofonRequest<CallToAuthResponse>(
-    "/v1/flash-call/call-to-auth",
-    { body: { phone } }
+    "/api/v1/flash-call/call-to-auth",
+    { body: { phone, hook_url: hookUrl } }
   )
 
   if (!result.success || !result.data) {
-    throw new Error(result.message || "Plusofon request failed")
+    throw new Error(result.message || "Plusofon call-to-auth request failed")
   }
 
   return result.data
 }
 
-export interface CheckStatusResponse {
-  status: "pending" | "verified" | "expired" | "failed"
+export interface WebhookPayload {
+  phone: string
+  key: string
 }
 
-export async function checkCallbackStatus(requestId: string): Promise<CheckStatusResponse> {
-  if (!PLUSOFON_API_KEY) {
-    throw new Error("PLUSOFON_API_KEY must be set")
+export function parseWebhook(body: unknown): WebhookPayload | null {
+  const data = body as Record<string, unknown>
+  if (typeof data?.phone === "string" && typeof data?.key === "string") {
+    return { phone: data.phone, key: data.key }
   }
-
-  const result = await plusofonRequest<CheckStatusResponse>(
-    "/v1/flash-call/check",
-    { params: { request_id: requestId } }
-  )
-
-  if (!result.data) {
-    throw new Error("Plusofon check failed")
-  }
-
-  return result.data
+  return null
 }

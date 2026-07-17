@@ -1,32 +1,35 @@
 import { NextResponse } from "next/server"
-import { checkCallbackStatus } from "@/lib/plusofon"
+import { verifyKey, deleteVerification } from "@/lib/verification-store"
 import { normalizePhone } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { signAccessToken, signRefreshToken, setTokenCookies } from "@/lib/jwt"
 
 export async function POST(req: Request) {
   try {
-    const { phone, requestId } = await req.json()
+    const { phone, key } = await req.json()
 
-    if (!phone || !requestId) {
-      return NextResponse.json({ error: "Телефон и requestId обязательны" }, { status: 400 })
+    if (!phone || !key) {
+      return NextResponse.json({ error: "Телефон и key обязательны" }, { status: 400 })
     }
 
     const normalizedPhone = normalizePhone(phone)
+    const entry = verifyKey(key)
 
-    const result = await checkCallbackStatus(requestId)
-
-    if (result.status !== "verified") {
-      const errorMessages: Record<string, string> = {
-        pending: "Звонок ещё не поступил. Позвоните на указанный номер.",
-        expired: "Время истекло. Запросите новый номер.",
-        failed: "Ошибка верификации. Попробуйте ещё раз.",
-      }
+    if (!entry) {
       return NextResponse.json(
-        { error: errorMessages[result.status] || "Ошибка верификации" },
+        { error: "Запрос не найден или истёк. Запросите новый номер." },
         { status: 400 }
       )
     }
+
+    if (entry.status !== "verified") {
+      return NextResponse.json(
+        { error: "Звонок ещё не поступил. Позвоните на указанный номер." },
+        { status: 400 }
+      )
+    }
+
+    deleteVerification(key)
 
     let user = await prisma.user.findUnique({ where: { phone: normalizedPhone } })
     if (!user) {

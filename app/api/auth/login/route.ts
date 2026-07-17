@@ -2,13 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 import { signAccessToken, signRefreshToken, setTokenCookies } from "@/lib/jwt"
-
-function normalizePhone(phone: string): string {
-  let clean = phone.replace(/\D/g, "")
-  if (clean.startsWith("8")) clean = "7" + clean.slice(1)
-  if (!clean.startsWith("7")) clean = "7" + clean
-  return "+" + clean
-}
+import { normalizePhone } from "@/lib/auth"
 
 export async function POST(req: Request) {
   try {
