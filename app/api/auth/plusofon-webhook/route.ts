@@ -1,22 +1,23 @@
 import { NextResponse } from "next/server"
-import { parseWebhook } from "@/lib/plusofon"
 import { markVerified } from "@/lib/verification-store"
 
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const payload = parseWebhook(body)
 
-    if (!payload) {
-      console.error("Invalid webhook payload:", body)
-      return NextResponse.json({ error: "Invalid payload" }, { status: 400 })
+    console.log("Plusofon webhook received:", JSON.stringify(body))
+
+    const key = body?.key as string | undefined
+    if (!key) {
+      console.error("No key in webhook payload:", body)
+      return NextResponse.json({ error: "No key" }, { status: 400 })
     }
 
-    console.log(`Webhook received: phone=${payload.phone}, key=${payload.key}`)
-
-    const marked = await markVerified(payload.key)
+    const marked = await markVerified(key)
     if (!marked) {
-      console.warn(`Key not found or expired: ${payload.key}`)
+      console.warn(`Key not found or expired: ${key}`)
+    } else {
+      console.log(`Key verified: ${key}`)
     }
 
     return NextResponse.json({ success: true })
