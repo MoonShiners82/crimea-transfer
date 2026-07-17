@@ -43,37 +43,54 @@ async function plusofonRequest<T = unknown>(
   return json as PlusofonResponse<T>
 }
 
-export interface CallToAuthResponse {
+export interface SendFlashCallResponse {
   key: string
-  phone: string
+  operator?: string
+  pin?: string
 }
 
-export async function requestCallback(phone: string, hookUrl: string): Promise<CallToAuthResponse> {
+export async function sendFlashCall(phone: string, pin?: string): Promise<SendFlashCallResponse> {
   if (!PLUSOFON_API_KEY) {
     throw new Error("PLUSOFON_API_KEY must be set")
   }
 
-  const result = await plusofonRequest<CallToAuthResponse>(
-    "/api/v1/flash-call/call-to-auth",
-    { body: { phone, hook_url: hookUrl } }
+  const body: Record<string, string> = { phone }
+  if (pin) body.pin = pin
+
+  const result = await plusofonRequest<SendFlashCallResponse>(
+    "/api/v1/flash-call/send",
+    { body }
   )
 
   if (!result.success || !result.data) {
-    throw new Error(result.message || "Plusofon call-to-auth request failed")
+    throw new Error(result.message || "Plusofon flash call send failed")
   }
 
   return result.data
 }
 
-export interface WebhookPayload {
-  phone: string
+export interface CheckFlashCallResponse {
   key: string
+  status?: string
 }
 
-export function parseWebhook(body: unknown): WebhookPayload | null {
-  const data = body as Record<string, unknown>
-  if (typeof data?.phone === "string" && typeof data?.key === "string") {
-    return { phone: data.phone, key: data.key }
+export async function checkFlashCall(key: string, pin: string): Promise<CheckFlashCallResponse> {
+  if (!PLUSOFON_API_KEY) {
+    throw new Error("PLUSOFON_API_KEY must be set")
   }
-  return null
+
+  const result = await plusofonRequest<CheckFlashCallResponse>(
+    "/api/v1/flash-call/check",
+    { body: { key, pin } }
+  )
+
+  if (!result.success || !result.data) {
+    throw new Error(result.message || "Plusofon flash call check failed")
+  }
+
+  return result.data
+}
+
+export function generatePin(): string {
+  return String(Math.floor(1000 + Math.random() * 9000))
 }
