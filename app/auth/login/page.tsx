@@ -1,13 +1,11 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
 
 type Step = "phone" | "call"
 
 export default function LoginPage() {
-  const router = useRouter()
   const [step, setStep] = useState<Step>("phone")
   const [phone, setPhone] = useState("")
   const [callTo, setCallTo] = useState("")
@@ -40,14 +38,13 @@ export default function LoginPage() {
         return
       }
 
-      router.push("/")
-      router.refresh()
+      window.location.href = "/"
     } catch {
       setError("Ошибка сервера")
     } finally {
       setChecking(false)
     }
-  }, [phone, key, router])
+  }, [phone, key])
 
   useEffect(() => {
     if (step !== "call" || !key) return
@@ -225,12 +222,14 @@ export default function LoginPage() {
 
         {error && <p className="text-sm text-red-600 text-center mt-4">{error}</p>}
 
-        <div className="mt-6 text-center space-y-2">
+        <div className="mt-8 text-center">
           <Link href="/" className="text-xs text-[#8B7355] hover:text-[#1A2332] transition">
             На главную
           </Link>
-          <span className="text-[#B8D4E3]">|</span>
-          <Link href="/auth/staff-login" className="text-xs text-[#8B7355] hover:text-[#1A2332] transition">
+        </div>
+
+        <div className="mt-6 pt-4 border-t border-[#B8D4E3]/50 text-center">
+          <Link href="/auth/staff-login" className="text-[10px] text-[#B8D4E3] hover:text-[#8B7355] transition">
             Вход для сотрудников
           </Link>
         </div>

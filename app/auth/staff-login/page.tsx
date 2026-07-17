@@ -98,10 +98,13 @@ export default function StaffLoginPage() {
           </button>
         </form>
 
-        <div className="mt-6 text-center">
-          <p className="text-xs text-[#8B7355]">
-            Авторизация по номеру телефона временно недоступна
+        <div className="mt-6 text-center space-y-3">
+          <p className="text-xs text-[#B8D4E3]">
+            Резервный вход по паролю для сотрудников
           </p>
+          <a href="/auth/login" className="text-xs text-[#8B7355] hover:text-[#1A2332] transition">
+            Войти по номеру телефона
+          </a>
         </div>
       </div>
     </div>
