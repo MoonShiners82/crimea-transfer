@@ -66,7 +66,7 @@ async function verifyJwt(token: string): Promise<JWTPayload | null> {
 }
 
 const API_ROLE_MAP: Record<string, string[]> = {
-  "/api/admin": ["admin"],
+  "/api/admin": ["admin", "dispatcher"],
   "/api/dispatcher": ["dispatcher", "admin"],
   "/api/driver": ["driver"],
   "/api/bookings": ["user", "admin"],
