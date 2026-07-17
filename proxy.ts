@@ -39,6 +39,12 @@ function rateLimit(
 }
 
 function getRateLimitConfig(pathname: string) {
+  if (pathname === "/api/auth/verify-code") {
+    return { windowMs: 60 * 1000, max: 60 }
+  }
+  if (pathname === "/api/auth/plusofon-webhook") {
+    return { windowMs: 60 * 1000, max: 120 }
+  }
   if (pathname.startsWith("/api/auth")) {
     return { windowMs: 15 * 60 * 1000, max: 10 }
   }
