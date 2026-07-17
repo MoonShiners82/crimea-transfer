@@ -1,44 +1,82 @@
-const PLUSOFON_BASE = "https://api.plusofon.ru"
 const PLUSOFON_API_KEY = process.env.PLUSOFON_API_KEY
+const PLUSOFON_BASE_URL = "https://api.plusofon.ru"
 
-if (!PLUSOFON_API_KEY) {
-  throw new Error("PLUSOFON_API_KEY not set")
+interface PlusofonResponse<T = unknown> {
+  success: boolean
+  data?: T
+  message?: string
 }
 
-async function plusofonFetch<T>(path: string, body: Record<string, unknown>): Promise<T> {
-  const res = await fetch(`${PLUSOFON_BASE}${path}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${PLUSOFON_API_KEY}`,
-    },
-    body: JSON.stringify(body),
-  })
+async function plusofonRequest<T = unknown>(
+  path: string,
+  options: { method?: string; body?: Record<string, unknown>; params?: Record<string, string> } = {}
+): Promise<PlusofonResponse<T>> {
+  const { method = "POST", body, params } = options
 
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`Plusofon API ${res.status}: ${text}`)
+  let url = `${PLUSOFON_BASE_URL}${path}`
+  if (params) {
+    const searchParams = new URLSearchParams(params)
+    url += `?${searchParams.toString()}`
   }
 
-  return res.json()
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${PLUSOFON_API_KEY}`,
+  }
+
+  const response = await fetch(url, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(`Plusofon API error (${response.status}): ${errorText}`)
+  }
+
+  return response.json()
 }
 
-export interface FlashCallSendResponse {
-  key: string
-  operator?: string
-  pin?: string
-  error?: string
+export interface CallToAuthResponse {
+  request_id: string
+  phone: string
 }
 
-export interface FlashCallCheckResponse {
-  success: boolean
-  error?: string
+export async function requestCallback(phone: string): Promise<CallToAuthResponse> {
+  if (!PLUSOFON_API_KEY) {
+    throw new Error("PLUSOFON_API_KEY must be set")
+  }
+
+  const result = await plusofonRequest<CallToAuthResponse>(
+    "/v1/flash-call/call-to-auth",
+    { body: { phone } }
+  )
+
+  if (!result.success || !result.data) {
+    throw new Error(result.message || "Plusofon request failed")
+  }
+
+  return result.data
 }
 
-export async function sendFlashCall(phone: string): Promise<FlashCallSendResponse> {
-  return plusofonFetch<FlashCallSendResponse>("/api/v1/flash-call/send", { phone })
+export interface CheckStatusResponse {
+  status: "pending" | "verified" | "expired" | "failed"
 }
 
-export async function checkFlashCallPin(key: string, pin: string): Promise<FlashCallCheckResponse> {
-  return plusofonFetch<FlashCallCheckResponse>("/api/v1/flash-call/check", { key, pin })
+export async function checkCallbackStatus(requestId: string): Promise<CheckStatusResponse> {
+  if (!PLUSOFON_API_KEY) {
+    throw new Error("PLUSOFON_API_KEY must be set")
+  }
+
+  const result = await plusofonRequest<CheckStatusResponse>(
+    "/v1/flash-call/check",
+    { params: { request_id: requestId } }
+  )
+
+  if (!result.data) {
+    throw new Error("Plusofon check failed")
+  }
+
+  return result.data
 }
