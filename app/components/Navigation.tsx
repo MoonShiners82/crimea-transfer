@@ -73,14 +73,7 @@ export default function Navigation() {
                   </button>
                 </div>
               </>
-            ) : (
-              <Link
-                href="/auth/staff-login"
-                className="bg-[#E8A838] text-[#1A2332] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#d49a30] transition"
-              >
-                Войти
-              </Link>
-            )}
+            ) : null}
           </div>
         </div>
       </div>

@@ -7,6 +7,10 @@ export default function Footer() {
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm">
           <p>&copy; {new Date().getFullYear()} КрымТрансфер</p>
           <div className="flex gap-4">
+            <Link href="/auth/login" className="hover:text-white transition">
+              Войти
+            </Link>
+            <span className="text-white/30">|</span>
             <Link href="/terms" className="hover:text-white transition">
               Пользовательское соглашение
             </Link>
