@@ -2,9 +2,9 @@ import { NextResponse } from "next/server"
 import { requireRole } from "@/lib/auth-helpers"
 import { prisma } from "@/lib/prisma"
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const { res } = requireRole("dispatcher")
+    const { res } = requireRole("dispatcher", req)
     if (res) return res
 
     const now = new Date()
