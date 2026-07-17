@@ -14,28 +14,27 @@ export async function POST(req: Request) {
 
     const normalizedPhone = normalizePhone(phone)
 
-    const token = await prisma.verificationToken.findUnique({
+    const verToken = await prisma.verificationToken.findFirst({
       where: { phone: normalizedPhone },
+      orderBy: { createdAt: "desc" },
     })
 
-    if (!token || token.isUsed) {
+    if (!verToken || verToken.isUsed) {
       return NextResponse.json({ error: "Сначала запросите звонок" }, { status: 400 })
     }
 
-    if (new Date() > token.expiresAt) {
+    if (new Date() > verToken.expiresAt) {
       return NextResponse.json({ error: "Код истёк, запросите звонок снова" }, { status: 400 })
     }
 
-    // Verify with Plusofon
-    const result = await checkFlashCallPin(token.token, pin)
+    const result = await checkFlashCallPin(verToken.token, pin)
 
     if (!result.success) {
       return NextResponse.json({ error: "Неверный код" }, { status: 400 })
     }
 
-    // Mark token as used
     await prisma.verificationToken.update({
-      where: { phone: normalizedPhone },
+      where: { id: verToken.id },
       data: { isUsed: true },
     })
 

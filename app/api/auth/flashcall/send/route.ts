@@ -19,13 +19,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: result.error }, { status: 400 })
     }
 
-    // Store flash call key for verification (5 minutes)
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000)
-    await prisma.verificationToken.upsert({
-      where: { phone: normalizedPhone },
-      update: { token: result.key, expiresAt, isUsed: false },
-      create: { phone: normalizedPhone, token: result.key, expiresAt },
-    })
+    const existing = await prisma.verificationToken.findFirst({ where: { phone: normalizedPhone } })
+    if (existing) {
+      await prisma.verificationToken.update({
+        where: { id: existing.id },
+        data: { token: result.key, expiresAt, isUsed: false },
+      })
+    } else {
+      await prisma.verificationToken.create({
+        data: { phone: normalizedPhone, token: result.key, expiresAt },
+      })
+    }
 
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
