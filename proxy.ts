@@ -129,7 +129,7 @@ async function handleApiRoute(request: NextRequest, pathname: string) {
     )
   }
 
-  if (CSRF_MUTATING_METHODS.has(request.method)) {
+  if (CSRF_MUTATING_METHODS.has(request.method) && !pathname.startsWith("/api/auth/plusofon-webhook")) {
     const origin = request.headers.get("origin")
     const host = request.headers.get("host")
 
