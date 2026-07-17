@@ -12,12 +12,7 @@ export async function POST(req: Request) {
     }
 
     const normalizedPhone = normalizePhone(phone)
-    const hookUrl = process.env.PLUSOFON_HOOK_URL
-
-    if (!hookUrl) {
-      console.error("PLUSOFON_HOOK_URL is not set")
-      return NextResponse.json({ error: "Сервис временно недоступен" }, { status: 500 })
-    }
+    const hookUrl = process.env.PLUSOFON_HOOK_URL || `${new URL(req.url).origin}/api/auth/plusofon-webhook`
 
     const result = await requestCallback(normalizedPhone, hookUrl)
 
