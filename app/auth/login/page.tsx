@@ -159,7 +159,11 @@ export default function LoginPage() {
           </form>
         )}
 
-        <div className="mt-6 text-center">
+        <div className="mt-6 text-center space-y-2">
+          <Link href="/" className="text-xs text-[#8B7355] hover:text-[#1A2332] transition">
+            На главную
+          </Link>
+          <span className="text-[#B8D4E3]">|</span>
           <Link href="/auth/staff-login" className="text-xs text-[#8B7355] hover:text-[#1A2332] transition">
             Вход для сотрудников
           </Link>

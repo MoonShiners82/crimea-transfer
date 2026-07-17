@@ -85,7 +85,7 @@ export default function Home() {
             Комфортные поездки в любую точку полуострова
           </p>
           <Link
-            href={user ? "/booking" : "/auth/staff-login"}
+            href={user ? "/booking" : "/auth/login"}
             className="inline-block bg-[#E8A838] text-[#1A2332] px-8 py-4 rounded-lg font-semibold text-lg hover:bg-[#d49a30] transition shadow-lg"
           >
             Забронировать трансфер
@@ -225,7 +225,7 @@ export default function Home() {
             Забронируйте трансфер прямо сейчас — это займёт всего 2 минуты
           </p>
           <Link
-            href={user ? "/booking" : "/auth/staff-login"}
+            href={user ? "/booking" : "/auth/login"}
             className="inline-block bg-[#E8A838] text-[#1A2332] px-8 py-4 rounded-lg font-semibold text-lg hover:bg-[#d49a30] transition shadow-lg"
           >
             Забронировать трансфер

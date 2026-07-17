@@ -78,7 +78,7 @@ export default function BookingPage() {
   const [showToDropdown, setShowToDropdown] = useState(false)
 
   useEffect(() => {
-    if (status === "unauthenticated") router.push("/auth/signin")
+    if (status === "unauthenticated") router.push("/auth/login")
   }, [status, router])
 
   useEffect(() => {

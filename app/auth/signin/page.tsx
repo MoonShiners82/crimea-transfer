@@ -7,7 +7,7 @@ export default function SignInPage() {
   const router = useRouter()
 
   useEffect(() => {
-    router.replace("/auth/staff-login")
+    router.replace("/auth/login")
   }, [router])
 
   return (
