@@ -16,7 +16,7 @@ export async function POST(req: Request) {
 
     const result = await requestCallback(normalizedPhone, hookUrl)
 
-    createVerification(result.key, normalizedPhone)
+    await createVerification(result.key, normalizedPhone)
 
     console.log(`CallToAuth requested for ${normalizedPhone}, key: ${result.key}, callTo: ${result.phone}`)
 

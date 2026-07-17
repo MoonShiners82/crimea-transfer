@@ -78,6 +78,18 @@ model VerificationToken {
   @@index([phone])
 }
 
+model FlashCallVerification {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  phone     String
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([key])
+  @@index([phone])
+}
+
 model Driver {
   id           String    @id @default(cuid())
   userId       String?   @unique

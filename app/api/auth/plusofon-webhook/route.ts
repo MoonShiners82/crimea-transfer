@@ -14,7 +14,7 @@ export async function POST(req: Request) {
 
     console.log(`Webhook received: phone=${payload.phone}, key=${payload.key}`)
 
-    const marked = markVerified(payload.key)
+    const marked = await markVerified(payload.key)
     if (!marked) {
       console.warn(`Key not found or expired: ${payload.key}`)
     }

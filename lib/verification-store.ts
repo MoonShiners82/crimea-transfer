@@ -1,40 +1,32 @@
-interface PendingVerification {
-  phone: string
-  status: "pending" | "verified"
-  createdAt: number
+import { prisma } from "./prisma"
+
+export async function createVerification(key: string, phone: string): Promise<void> {
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000)
+  await prisma.flashCallVerification.create({
+    data: { key, phone, status: "pending", expiresAt },
+  })
 }
 
-const store = new Map<string, PendingVerification>()
-
-const TTL_MS = 5 * 60 * 1000
-
-export function createVerification(key: string, phone: string): void {
-  cleanup()
-  store.set(key, { phone, status: "pending", createdAt: Date.now() })
-}
-
-export function verifyKey(key: string): PendingVerification | null {
-  const entry = store.get(key)
+export async function verifyKey(key: string) {
+  const entry = await prisma.flashCallVerification.findUnique({ where: { key } })
   if (!entry) return null
+  if (entry.expiresAt < new Date()) {
+    await prisma.flashCallVerification.delete({ where: { key } })
+    return null
+  }
   return entry
 }
 
-export function markVerified(key: string): boolean {
-  const entry = store.get(key)
+export async function markVerified(key: string): Promise<boolean> {
+  const entry = await prisma.flashCallVerification.findUnique({ where: { key } })
   if (!entry) return false
-  entry.status = "verified"
+  await prisma.flashCallVerification.update({
+    where: { key },
+    data: { status: "verified" },
+  })
   return true
 }
 
-export function deleteVerification(key: string): void {
-  store.delete(key)
-}
-
-function cleanup() {
-  const now = Date.now()
-  for (const [key, entry] of store) {
-    if (now - entry.createdAt > TTL_MS) {
-      store.delete(key)
-    }
-  }
+export async function deleteVerification(key: string): Promise<void> {
+  await prisma.flashCallVerification.deleteMany({ where: { key } })
 }

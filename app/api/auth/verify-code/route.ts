@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     }
 
     const normalizedPhone = normalizePhone(phone)
-    const entry = verifyKey(key)
+    const entry = await verifyKey(key)
 
     if (!entry) {
       return NextResponse.json(
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
       )
     }
 
-    deleteVerification(key)
+    await deleteVerification(key)
 
     let user = await prisma.user.findUnique({ where: { phone: normalizedPhone } })
     if (!user) {
