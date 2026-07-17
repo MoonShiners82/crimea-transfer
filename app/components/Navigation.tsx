@@ -15,12 +15,6 @@ export default function Navigation() {
           </Link>
 
           <div className="flex items-center gap-4">
-            <Link
-              href="/terms"
-              className="text-white/60 hover:text-white text-sm transition hidden sm:block"
-            >
-              Оферта
-            </Link>
             {user ? (
               <>
                 <Link
