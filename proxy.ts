@@ -42,6 +42,9 @@ function getRateLimitConfig(pathname: string) {
   if (pathname === "/api/auth/verify-code") {
     return { windowMs: 60 * 1000, max: 60 }
   }
+  if (pathname === "/api/auth/plusofon-webhook") {
+    return { windowMs: 60 * 1000, max: 120 }
+  }
   if (pathname.startsWith("/api/auth")) {
     return { windowMs: 15 * 60 * 1000, max: 10 }
   }
@@ -126,7 +129,7 @@ async function handleApiRoute(request: NextRequest, pathname: string) {
     )
   }
 
-  if (CSRF_MUTATING_METHODS.has(request.method)) {
+  if (CSRF_MUTATING_METHODS.has(request.method) && !pathname.startsWith("/api/auth/plusofon-webhook")) {
     const origin = request.headers.get("origin")
     const host = request.headers.get("host")
 
@@ -149,6 +152,7 @@ async function handleApiRoute(request: NextRequest, pathname: string) {
     "/api/auth/me",
     "/api/auth/send-code",
     "/api/auth/verify-code",
+    "/api/auth/plusofon-webhook",
     "/api/calculate-price",
     "/api/routes",
     "/api/settings",

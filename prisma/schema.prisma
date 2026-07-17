@@ -82,7 +82,7 @@ model FlashCallVerification {
   id        String   @id @default(cuid())
   key       String   @unique
   phone     String
-  pin       String
+  pin       String?
   status    String   @default("pending")
   createdAt DateTime @default(now())
   expiresAt DateTime

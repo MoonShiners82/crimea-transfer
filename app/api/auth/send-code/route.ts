@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { sendFlashCall, generatePin } from "@/lib/plusofon"
+import { requestCallback } from "@/lib/plusofon"
 import { normalizePhone } from "@/lib/auth"
 import { createVerification } from "@/lib/verification-store"
 
@@ -12,18 +12,19 @@ export async function POST(req: Request) {
     }
 
     const normalizedPhone = normalizePhone(phone)
-    const pin = generatePin()
+    const hookUrl = process.env.PLUSOFON_HOOK_URL || `${new URL(req.url).origin}/api/auth/plusofon-webhook`
 
-    const result = await sendFlashCall(normalizedPhone, pin)
+    const result = await requestCallback(normalizedPhone, hookUrl)
 
-    await createVerification(result.key, normalizedPhone, pin)
+    await createVerification(result.key, normalizedPhone)
 
-    console.log(`Flash call sent to ${normalizedPhone}, key: ${result.key}`)
+    console.log(`CallToAuth requested for ${normalizedPhone}, key: ${result.key}, callTo: ${result.phone}`)
 
     return NextResponse.json({
       success: true,
-      message: "Вам поступит звонок. Ответьте и запомните последние 4 цифры номера.",
+      message: "Вам будет показан номер для звонка. Позвоните на него с вашего телефона для подтверждения.",
       key: result.key,
+      callTo: result.phone,
     })
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Ошибка отправки запроса"

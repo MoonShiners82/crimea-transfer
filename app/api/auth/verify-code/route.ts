@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server"
 import { verifyKey, deleteVerification } from "@/lib/verification-store"
-import { checkFlashCall } from "@/lib/plusofon"
 import { normalizePhone } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { signAccessToken, signRefreshToken, setTokenCookies } from "@/lib/jwt"
 
 export async function POST(req: Request) {
   try {
-    const { phone, key, pin: inputPin } = await req.json()
+    const { phone, key } = await req.json()
 
     if (!phone || !key) {
       return NextResponse.json({ error: "Телефон и key обязательны" }, { status: 400 })
@@ -23,13 +22,9 @@ export async function POST(req: Request) {
       )
     }
 
-    const pin = inputPin || entry.pin
-
-    try {
-      await checkFlashCall(key, pin)
-    } catch {
+    if (entry.status !== "verified") {
       return NextResponse.json(
-        { error: "Звонок ещё не принят или неверный код. Попробуйте ещё раз." },
+        { error: "Звонок ещё не поступил. Позвоните на указанный номер." },
         { status: 400 }
       )
     }

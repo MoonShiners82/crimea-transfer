@@ -10,6 +10,7 @@ export default function LoginPage() {
   const router = useRouter()
   const [step, setStep] = useState<Step>("phone")
   const [phone, setPhone] = useState("")
+  const [callTo, setCallTo] = useState("")
   const [key, setKey] = useState("")
   const [message, setMessage] = useState("")
   const [error, setError] = useState("")
@@ -32,7 +33,7 @@ export default function LoginPage() {
       const data = await res.json()
 
       if (!res.ok) {
-        if (data.error?.includes("не принят")) {
+        if (data.error?.includes("не поступил")) {
           return
         }
         setError(data.error || "Ошибка")
@@ -94,9 +95,10 @@ export default function LoginPage() {
         return
       }
 
+      setCallTo(data.callTo)
       setKey(data.key)
       setStep("call")
-      setMessage("Вам поступит звонок. Ответьте для подтверждения.")
+      setMessage("Позвоните на указанный номер с вашего телефона")
     } catch {
       setError("Ошибка сервера")
     } finally {
@@ -104,7 +106,7 @@ export default function LoginPage() {
     }
   }
 
-  const handleNewCall = async () => {
+  const handleNewNumber = async () => {
     setError("")
     setMessage("")
     setLoading(true)
@@ -118,8 +120,9 @@ export default function LoginPage() {
       if (!res.ok) {
         setError(data.error || "Ошибка")
       } else {
+        setCallTo(data.callTo)
         setKey(data.key)
-        setMessage("Новый звонок отправлен")
+        setMessage("Новый номер получен")
       }
     } catch {
       setError("Ошибка сервера")
@@ -163,17 +166,20 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full bg-[#E8A838] text-[#1A2332] py-3 rounded-lg font-semibold hover:bg-[#d49a30] transition disabled:opacity-50"
             >
-              {loading ? "Отправка..." : "Получить звонок"}
+              {loading ? "Отправка..." : "Получить номер для звонка"}
             </button>
           </form>
         ) : (
           <div className="space-y-4">
             <div className="text-center">
               <p className="text-sm text-[#8B7355] mb-4">
-                Вам поступит звонок. Ответьте для подтверждения.
+                Позвоните на этот номер с вашего телефона:
               </p>
-              <p className="text-xs text-[#8B7355] mb-2">
-                Мы автоматически определим, когда вы ответите.
+              <p className="text-3xl font-bold text-[#2D6A8F] tracking-wider">
+                {callTo}
+              </p>
+              <p className="text-xs text-[#8B7355] mt-2">
+                Звонок бесплатный. Код подтверждения не требуется.
               </p>
               {timeLeft > 0 && (
                 <p className="text-sm text-[#2D6A8F] mt-3 font-medium">
@@ -187,23 +193,31 @@ export default function LoginPage() {
             {checking && (
               <div className="flex items-center justify-center gap-2">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#2D6A8F]" />
-                <span className="text-sm text-[#8B7355]">Ожидание ответа...</span>
+                <span className="text-sm text-[#8B7355]">Ожидание звонка...</span>
               </div>
             )}
 
+            <button
+              onClick={handleVerify}
+              disabled={checking}
+              className="w-full bg-[#E8A838] text-[#1A2332] py-3 rounded-lg font-semibold hover:bg-[#d49a30] transition disabled:opacity-50"
+            >
+              Я позвонил, проверить
+            </button>
+
             <div className="flex justify-between">
               <button
-                onClick={() => { setStep("phone"); setKey(""); setError(""); setMessage("") }}
+                onClick={() => { setStep("phone"); setCallTo(""); setKey(""); setError(""); setMessage("") }}
                 className="text-sm text-[#8B7355] hover:text-[#1A2332]"
               >
                 Изменить номер
               </button>
               <button
-                onClick={handleNewCall}
+                onClick={handleNewNumber}
                 disabled={loading}
                 className="text-sm text-[#2D6A8F] hover:text-[#1A2332]"
               >
-                Повторить звонок
+                Получить новый номер
               </button>
             </div>
           </div>
